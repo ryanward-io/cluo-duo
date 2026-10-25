@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clue Words Duet</title>
+  <meta name="description" content="Free online Codenames Duet alternative: a two-player co-operative word game you play with an AI partner.">
+  <link rel="stylesheet" href="assets/app.css">
+  <script src="assets/app.js" type="module"></script>
+</head>
+<body>
+  <header class="site">
+    <a class="home" href="https://ryanward.dev/projects/">ryanward.dev / projects</a>
+  </header>
+
+  <main>
+    <h1>Clue Words Duet</h1>
+    <p class="lede">Free online Codenames Duet alternative: a co-operative word game you play with an AI partner.</p>
+
+    <section id="setup" class="panel">
+      <h2>New game</h2>
+      <div class="row">
+        <fieldset>
+          <legend>Who gives the first clue?</legend>
+          <label><input type="radio" name="first" value="partner" checked> My partner</label>
+          <label><input type="radio" name="first" value="human"> Me</label>
+        </fieldset>
+        <label class="stack">Partner
+          <select id="partner">
+            <option value="random">Random (placeholder, guesses blindly)</option>
+          </select>
+        </label>
+      </div>
+      <button id="start" type="button">Start game</button>
+      <details class="rules">
+        <summary>How to play</summary>
+        <ul>
+          <li>You and your partner share 25 words. Each of you has a secret key: 9 of the words are your <strong>agents</strong> (green), 3 are <strong>assassins</strong>, and the rest are bystanders. Your keys overlap but aren't the same, so there are 15 agents to find between you.</li>
+          <li>Take turns giving a <strong>one-word clue and a number</strong> that point to agents on your own key. Your partner guesses words one at a time.</li>
+          <li>When you guess, your partner's key decides: an agent and you can keep going; a bystander ends the turn; an assassin loses the game.</li>
+          <li>Clues can't be a word on the board or contain one (or be contained in one).</li>
+          <li>Find all 15 agents within 9 turns to win.</li>
+        </ul>
+      </details>
+    </section>
+
+    <section id="game" hidden>
+      <div class="scoreboard" aria-live="polite">
+        <span id="found"></span>
+        <span id="turns"></span>
+        <span id="partner-name" class="muted"></span>
+      </div>
+
+      <div id="board" class="board" role="group" aria-label="Word grid"></div>
+
+      <div class="legend muted">
+        <span><i class="dot agent"></i> your agent</span>
+        <span><i class="dot assassin"></i> your assassin</span>
+        <span><i class="mark mine">✕</i> bystander on your key</span>
+        <span><i class="mark theirs">✕</i> bystander on partner's key</span>
+      </div>
+
+      <div id="action" class="panel action" aria-live="polite"></div>
+      <div id="error" class="error" role="alert"></div>
+
+      <details class="log" open>
+        <summary>Game log</summary>
+        <ol id="log"></ol>
+      </details>
+    </section>
+  </main>
+
+  <footer class="site">
+    <p>An original word game in the Duet style; not affiliated with Codenames or Czech Games Edition. <a href="https://github.com/ryanward-io/clue-words-duet">Source on GitHub</a> · by <a href="https://ryanward.dev">Ryan Ward</a></p>
+  </footer>
+</body>
+</html>

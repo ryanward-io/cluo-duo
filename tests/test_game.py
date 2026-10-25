@@ -91,3 +91,21 @@ def test_api_flow_hides_ai_key():
     assert v["phase"] in ("guess", "over")
     bad = client.post(f"/api/games/{v['id']}/clue", json={"word": v["words"][0], "number": 1})
     assert bad.status_code == 400
+
+
+def test_glove_partner_plays_legal_games():
+    from pathlib import Path
+
+    from cluoduo.glove import DEFAULT_VECTORS
+
+    if not Path(DEFAULT_VECTORS).exists():
+        pytest.skip("word vectors not built (scripts/prepare_vectors.py)")
+    from cluoduo.players import PLAYERS
+
+    a, b = PLAYERS["glove-sum"](), PLAYERS["glove-sum"]()
+    for seed in range(5):
+        s = self_play(a, b, seed=seed)
+        assert s["phase"] == "over"
+        for h in s["history"]:
+            if h["type"] == "clue":
+                assert h["word"].isalpha() and h["word"] not in s["words"]

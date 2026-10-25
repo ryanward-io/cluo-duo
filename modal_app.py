@@ -19,7 +19,10 @@ app = modal.App("cluo-duo")
 # add_local_python_source copies our own package into the image at deploy time.
 image = (
     modal.Image.debian_slim(python_version="3.13")
-    .uv_pip_install("fastapi[standard]==0.162.0", "pydantic==2.14.1")
+    .uv_pip_install("fastapi[standard]==0.162.0", "pydantic==2.14.1", "numpy==2.5.4")
+    # Word vectors for the GloVe partner (built by scripts/prepare_vectors.py; not in git).
+    .add_local_file("data/glove50k.npz", "/data/glove50k.npz")
+    .env({"CLUODUO_VECTORS": "/data/glove50k.npz"})
     .add_local_python_source("cluoduo")
 )
 

@@ -52,7 +52,13 @@ class RandomPlayer:
         return self.rng.choice(options) if options else None
 
 
-PLAYERS = {"random": RandomPlayer}
+def _glove_sum(seed=None, **kwargs):
+    from .glove import GloveSumPlayer  # imported lazily: loads the word vectors
+
+    return GloveSumPlayer(seed, **kwargs)
+
+
+PLAYERS = {"random": RandomPlayer, "glove-sum": _glove_sum}
 
 MAX_CLUE_ATTEMPTS = 3
 

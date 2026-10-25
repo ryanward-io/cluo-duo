@@ -109,3 +109,32 @@ def test_glove_partner_plays_legal_games():
         for h in s["history"]:
             if h["type"] == "clue":
                 assert h["word"].isalpha() and h["word"] not in s["words"]
+
+
+def test_key_prior_matches_layout_at_start():
+    from cluoduo.glove import key_prior
+
+    s = game.give_clue(game.new_game(seed=1, first_clue="b"), "b", "ZZZ", 1)
+    prior = key_prior(game.view(s, "a"))
+    mine = s["key"]["a"]
+    agent = next(i for i in prior if mine[i] == "G")
+    assassin = next(i for i in prior if mine[i] == "A")
+    assert prior[agent] == pytest.approx({"G": 3 / 9, "N": 5 / 9, "A": 1 / 9})
+    assert prior[assassin] == pytest.approx({"G": 1 / 3, "N": 1 / 3, "A": 1 / 3})
+
+
+def test_key_prior_updates_after_a_revealed_bystander():
+    from cluoduo.glove import key_prior
+
+    s = game.give_clue(game.new_game(seed=1, first_clue="b"), "b", "ZZZ", 1)
+    mine, theirs = s["key"]["a"], s["key"]["b"]
+    hit = next(i for i in range(25) if mine[i] == "G" and theirs[i] == "N")
+    s = game.guess(s, "a", hit)  # bystander on b's key: turn passes to a, then back to b
+    s = game.give_clue(s, "a", "ZZZ", 1)
+    s = game.guess(s, "b", next(i for i in range(25) if mine[i] == "N" and theirs[i] != "A" and not s["found"][i] and i not in s["bystanders"]["a"]))
+    if s["phase"] == "guess":
+        s = game.stop(s, "b")
+    s = game.give_clue(s, "b", "ZZZ", 1)
+    prior = key_prior(game.view(s, "a"))
+    agent = next(i for i in prior if mine[i] == "G")
+    assert prior[agent] == pytest.approx({"G": 3 / 8, "N": 4 / 8, "A": 1 / 8})

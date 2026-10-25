@@ -129,3 +129,86 @@ class GloveSumPlayer:
         clue_vec = self.v.matrix[self.v.index[clue["word"]]]
         board_vecs = self.v.matrix[self.v.ids([view["words"][i] for i in options])]
         return options[int(np.argmax(board_vecs @ clue_vec))]
+
+
+# ---------- v1 + Bayesian guessing ----------
+
+def known_giver_key(view: dict, giver: str) -> dict[int, str]:
+    """What earlier turns revealed about `giver`'s key: every guess made on their clues shows that card's colour on their key."""
+    known, current_giver = {}, None
+    for h in view["history"]:
+        if h["type"] == "clue":
+            current_giver = h["side"]
+        elif h["type"] == "guess" and current_giver == giver:
+            known[h["index"]] = h["outcome"]
+    return known
+
+
+def key_prior(view: dict) -> dict[int, dict[str, float]]:
+    """Prior P(agent / bystander / assassin on the clue giver's key) for each card I could guess.
+
+    The rules fix how the two keys overlap (game.KEY_LAYOUT). Of my 9 agents, 3 are also my
+    partner's agents, 5 are their bystanders and 1 is their assassin; of my 3 assassins, one
+    each is their agent, bystander and assassin; and so on. Cards whose colour on the giver's
+    key has already been revealed are taken out of those counts. Cards that left play without
+    revealing it (found on my clues) are simply ignored: by symmetry, not knowing which one
+    left doesn't change the odds for the rest.
+    """
+    giver, mine = view["clue"]["giver"], view["my_key"]
+    counts = {m: {g: 0 for g in "GNA"} for m in "GNA"}
+    for (a, b), n in game.KEY_LAYOUT.items():  # the layout is symmetric, so side order doesn't matter
+        counts[a][b] += n
+    for i, colour in known_giver_key(view, giver).items():
+        counts[mine[i]][colour] -= 1
+    prior = {}
+    for i in open_cards(view, giver):
+        c = counts[mine[i]]
+        total = sum(c.values()) or 1
+        prior[i] = {g: c[g] / total for g in "GNA"}
+    return prior
+
+
+class GloveBayesPlayer(GloveSumPlayer):
+    """Same clues as v1; guesses combine GloVe similarity with what my own key implies about my partner's.
+
+    For each card: prior from key_prior(), then a likelihood ratio from similarity,
+    exp((similarity - mu) / tau), which multiplies the odds that the card is an agent.
+    A card at similarity `mu` (roughly "unrelated") leaves the prior unchanged; every
+    `tau` above it multiplies the agent odds by e. Then pick the card with the best
+    P(agent) - assassin_cost * P(assassin), and stop early once that turns negative.
+    """
+
+    name = "glove-bayes"
+
+    # Tuned on boards 0-99. On boards 20000-20999 it beat v1 23.7% to 22.1% (paired McNemar p = 0.026; scripts/compare.py).
+    def __init__(self, seed: int | None = None, *, mu: float = 0.2, tau: float = 0.03,
+                 assassin_cost: float = 1.0, **kwargs):
+        super().__init__(seed, **kwargs)
+        self.mu, self.tau, self.assassin_cost = mu, tau, assassin_cost
+
+    def posterior(self, view: dict) -> dict[int, dict[str, float]]:
+        clue = view["clue"]
+        prior = key_prior(view)
+        if clue["word"] not in self.v.index:
+            return prior
+        clue_vec = self.v.matrix[self.v.index[clue["word"]]]
+        post = {}
+        for i, p in prior.items():
+            sim = float(self.v.matrix[self.v.index[view["words"][i]]] @ clue_vec)
+            ratio = np.exp((sim - self.mu) / self.tau)
+            z = p["G"] * ratio + p["N"] + p["A"]
+            post[i] = {"G": p["G"] * ratio / z, "N": p["N"] / z, "A": p["A"] / z}
+        return post
+
+    def next_guess(self, view: dict) -> int | None:
+        clue = view["clue"]
+        if clue["guesses"] >= max(clue["number"], 1):
+            return None
+        post = self.posterior(view)
+        if not post:
+            return None
+        value = {i: p["G"] - self.assassin_cost * p["A"] for i, p in post.items()}
+        best = max(value, key=value.get)
+        if clue["guesses"] > 0 and value[best] < 0:
+            return None  # the next guess is more likely to hurt than help
+        return best

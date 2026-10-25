@@ -58,7 +58,13 @@ def _glove_sum(seed=None, **kwargs):
     return GloveSumPlayer(seed, **kwargs)
 
 
-PLAYERS = {"random": RandomPlayer, "glove-sum": _glove_sum}
+def _glove_bayes(seed=None, **kwargs):
+    from .glove import GloveBayesPlayer
+
+    return GloveBayesPlayer(seed, **kwargs)
+
+
+PLAYERS = {"random": RandomPlayer, "glove-sum": _glove_sum, "glove-bayes": _glove_bayes}
 
 MAX_CLUE_ATTEMPTS = 3
 

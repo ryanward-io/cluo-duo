@@ -19,7 +19,8 @@ from cluoduo import game
 from cluoduo.players import PLAYERS, self_play
 
 
-def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
+def wilson_interval(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """95% Wilson score interval for k successes in n trials (stays within 0-1, sensible at 0 wins)."""
     if n == 0:
         return 0.0, 0.0
     p = k / n
@@ -39,14 +40,21 @@ def evaluate(name: str, games: int, first_seed: int = 0, **kwargs) -> dict:
         found.append(game.found_count(s))
         turns.append(game.TURNS - s["turns_left"])
         sizes += [h["number"] for h in s["history"] if h["type"] == "clue"]
-        hits.append(sum(h["outcome"] == "G" for h in s["history"] if h["type"] == "guess"))
-    lo, hi = wilson(ends["won"], games)
+        hits.append(
+            sum(h["outcome"] == "G" for h in s["history"] if h["type"] == "guess")
+        )
+    lo, hi = wilson_interval(ends["won"], games)
     return {
-        "player": name + (" " + " ".join(f"{k}={v}" for k, v in kwargs.items()) if kwargs else ""),
-        "win": ends["won"] / games, "ci": (lo, hi),
-        "assassin": ends["assassin"] / games, "out_of_turns": ends["out_of_turns"] / games,
-        "found": sum(found) / games, "turns": sum(turns) / games,
-        "clue": sum(sizes) / max(len(sizes), 1), "per_turn": sum(hits) / max(sum(turns), 1),
+        "player": name
+        + (" " + " ".join(f"{k}={v}" for k, v in kwargs.items()) if kwargs else ""),
+        "win": ends["won"] / games,
+        "ci": (lo, hi),
+        "assassin": ends["assassin"] / games,
+        "out_of_turns": ends["out_of_turns"] / games,
+        "found": sum(found) / games,
+        "turns": sum(turns) / games,
+        "clue": sum(sizes) / max(len(sizes), 1),
+        "per_turn": sum(hits) / max(sum(turns), 1),
         "secs": time.perf_counter() - start,
     }
 
@@ -58,23 +66,42 @@ def parse_sets(items: list[str]) -> list[dict]:
         key, values = item.split("=", 1)
         grid[key] = [float(v) for v in values.split(",")]
     keys = list(grid)
-    return [dict(zip(keys, combo)) for combo in itertools.product(*(grid[k] for k in keys))] or [{}]
+    return [
+        dict(zip(keys, combo)) for combo in itertools.product(*(grid[k] for k in keys))
+    ] or [{}]
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     p.add_argument("players", nargs="+", choices=sorted(PLAYERS))
     p.add_argument("--games", type=int, default=200)
-    p.add_argument("--first-seed", type=int, default=0, help="tune on one range of boards, report on another")
-    p.add_argument("--set", action="append", default=[], metavar="PARAM=V1,V2", help="player settings to sweep")
+    p.add_argument(
+        "--first-seed",
+        type=int,
+        default=0,
+        help="tune on one range of boards, report on another",
+    )
+    p.add_argument(
+        "--set",
+        action="append",
+        default=[],
+        metavar="PARAM=V1,V2",
+        help="player settings to sweep",
+    )
     args = p.parse_args()
 
-    print(f"{'player':<44} {'win':>6} {'95% CI':>13} {'assassin':>9} {'no turns':>9} {'found':>6} {'turns':>6} {'clue n':>6} {'agents/turn':>11} {'secs':>6}")
+    print(
+        f"{'player':<44} {'win':>6} {'95% CI':>13} {'assassin':>9} {'no turns':>9} {'found':>6} {'turns':>6} {'clue n':>6} {'agents/turn':>11} {'secs':>6}"
+    )
     for name in args.players:
         for kwargs in parse_sets(args.set) if name != "random" else [{}]:
             r = evaluate(name, args.games, args.first_seed, **kwargs)
-            print(f"{r['player']:<44} {r['win']:6.1%} {r['ci'][0]:6.1%}-{r['ci'][1]:<6.1%} {r['assassin']:9.1%} "
-                  f"{r['out_of_turns']:9.1%} {r['found']:6.1f} {r['turns']:6.1f} {r['clue']:6.2f} {r['per_turn']:11.2f} {r['secs']:6.1f}")
+            print(
+                f"{r['player']:<44} {r['win']:6.1%} {r['ci'][0]:6.1%}-{r['ci'][1]:<6.1%} {r['assassin']:9.1%} "
+                f"{r['out_of_turns']:9.1%} {r['found']:6.1f} {r['turns']:6.1f} {r['clue']:6.2f} {r['per_turn']:11.2f} {r['secs']:6.1f}"
+            )
 
 
 if __name__ == "__main__":

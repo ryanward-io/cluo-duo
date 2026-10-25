@@ -1,10 +1,16 @@
-// Front end for Clue Words Duet. All rules run on the server; this file draws the board and sends moves.
+// Front end for Cluo Duo. All rules run on the server; this file draws the board and sends moves.
 
 const params = new URLSearchParams(location.search);
-const API = params.get("api") || "https://ryanward-io--clue-words-duet.us-east.modal.run";
-const SAVE_KEY = "clue-words-duet:game";
+const API = params.get("api") || "https://ryanward-io--cluo-duo.us-east.modal.run";
+const SAVE_KEY = "cluo-duo:game";
 
 const $ = (s) => document.querySelector(s);
+const SKULL = '<svg class="skull" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M8 1C4.1 1 1.5 3.6 1.5 7c0 2 .9 3.4 2.3 4.2V13a1 1 0 0 0 1 1h.9v-1.5h1V14h2.6v-1.5h1V14h.9a1 1 0 0 0 1-1v-1.8c1.4-.8 2.3-2.2 2.3-4.2C14.5 3.6 11.9 1 8 1zM5.3 9.6a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2zm5.4 0a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2zM8 11.2l-.9-1.6h1.8z"/></svg>';
+function skull(cls) {
+  const i = el("i", { class: `assassin-icon ${cls}` });
+  i.innerHTML = SKULL;
+  return i;
+}
 const OUTCOME = { G: "agent", N: "bystander", A: "assassin" };
 const RESULT = {
   won: "You found all 15 agents. You win!",
@@ -106,8 +112,8 @@ function renderBoard(before) {
     const cls = ["card", state.found[i] && "found", c.dead && "dead", c.guessable && "guessable",
       c.hitAssassin && "assassin-hit", changed && "flash"].filter(Boolean).join(" ");
     const keyDots = el("span", { class: "key", "aria-hidden": "true" },
-      c.myKey === "G" && el("i", { class: "dot agent" }), c.myKey === "A" && el("i", { class: "dot assassin" }),
-      c.partnerKey === "G" && el("i", { class: "dot agent partner" }), c.partnerKey === "A" && el("i", { class: "dot assassin partner" }));
+      c.myKey === "G" && el("i", { class: "dot agent" }), c.myKey === "A" && skull("mine"),
+      c.partnerKey === "G" && el("i", { class: "dot agent partner" }), c.partnerKey === "A" && skull("partner"));
     const marks = el("span", { class: "marks", "aria-hidden": "true" },
       c.mine && el("i", { class: "mark mine" }, "✕"), c.theirs && el("i", { class: "mark theirs" }, "✕"));
     return el("button", {
@@ -156,13 +162,16 @@ function renderAction(message) {
     return;
   }
   if (s.phase === "clue" && s.giver === "a") {
-    const word = el("input", { type: "text", id: "clue-word", required: true, autocomplete: "off", spellcheck: "false", maxlength: 30 });
+    const word = el("input", { type: "text", id: "clue-word", required: true, autocomplete: "off", spellcheck: "false", maxlength: 30,
+      pattern: "[A-Za-z]+", title: "One word, letters only", "aria-describedby": "clue-help" });
+    word.addEventListener("input", () => { word.value = word.value.replace(/[^A-Za-z]/g, ""); });
     const num = el("input", { type: "number", id: "clue-number", min: 0, max: 9, value: 1, required: true });
     const form = el("form", {
       class: "clue-form",
       onsubmit: (e) => { e.preventDefault(); act(`/api/games/${s.id}/clue`, { word: word.value, number: Number(num.value) }); },
     }, el("label", {}, "Clue word", word), el("label", {}, "Number", num), el("button", { type: "submit" }, "Give clue"));
-    box.replaceChildren(el("p", {}, "Your turn to give a clue. Point your partner at your green-dot words, and steer clear of your assassins."), form);
+    box.replaceChildren(el("p", {}, "Your turn to give a clue. Point your partner at your green-dot words, and steer clear of your assassins."), form,
+      el("p", { id: "clue-help", class: "muted hint" }, "One word, letters only. It can't be a word on the board or contain one."));
     word.focus();
     return;
   }

@@ -101,7 +101,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) { .card.flash { animation: none; } .card.guessable:hover { transform: none; } }
 
 .key { position: absolute; top: 5px; left: 6px; display: flex; gap: 3px; }
-.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; }
+.dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: middle; }
 .dot.agent { background: var(--agent); border: 1px solid var(--agent-text); }
 .dot.assassin { background: var(--assassin); border: 1px solid var(--bg); }
 .dot.partner { outline: 2px dashed var(--muted); outline-offset: 1px; }
@@ -125,3 +125,11 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .outcome-N { color: var(--mine); }
 .outcome-A { color: var(--error); font-weight: 700; }
 .card .word { display: inline-block; max-width: none; }
+
+.assassin-icon { display: inline-flex; width: 15px; height: 15px; color: var(--assassin); line-height: 0; }
+.assassin-icon .skull { width: 100%; height: 100%; }
+.card .assassin-icon { width: 20px; height: 20px; filter: drop-shadow(0 0 1px var(--card)); }
+.card.found .assassin-icon, .card.assassin-hit .assassin-icon { color: var(--error); }
+.assassin-icon.partner { color: var(--theirs); }
+.legend .assassin-icon { vertical-align: -3px; }
+.hint { font-size: 0.8rem; }

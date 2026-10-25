@@ -1,7 +1,7 @@
 [project]
-name = "cluewords"
+name = "cluoduo"
 version = "0.1.0"
-description = "Clue Words Duet: a co-operative word game with an AI partner"
+description = "Cluo Duo: a co-operative word game with an AI partner"
 readme = "README.md"
 authors = [
     { name = "Ryan Ward", email = "wardyryan1@gmail.com" }

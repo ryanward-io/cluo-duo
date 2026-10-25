@@ -2,8 +2,8 @@
 
 import uvicorn
 
-from cluewords.api import create_app
-from cluewords.store import MemoryStore
+from cluoduo.api import create_app
+from cluoduo.store import MemoryStore
 
 if __name__ == "__main__":
     uvicorn.run(create_app(MemoryStore(), allow_local=True), host="127.0.0.1", port=8001)

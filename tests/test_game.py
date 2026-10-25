@@ -3,10 +3,10 @@ from collections import Counter
 import pytest
 from fastapi.testclient import TestClient
 
-from cluewords import game
-from cluewords.api import create_app
-from cluewords.players import RandomPlayer, self_play
-from cluewords.store import MemoryStore
+from cluoduo import game
+from cluoduo.api import create_app
+from cluoduo.players import RandomPlayer, self_play
+from cluoduo.store import MemoryStore
 
 
 def test_key_layout_matches_rules():

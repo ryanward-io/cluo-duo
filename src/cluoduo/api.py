@@ -37,7 +37,7 @@ class Guess(BaseModel):
 
 
 def create_app(store: Store, allow_local: bool = False) -> FastAPI:
-    app = FastAPI(title="Clue Words Duet", docs_url=None, redoc_url=None)
+    app = FastAPI(title="Cluo Duo", docs_url=None, redoc_url=None)
     app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_origin_regex=LOCAL_ORIGINS if allow_local else None,
                        allow_methods=["GET", "POST"],
                        allow_headers=["Content-Type"])

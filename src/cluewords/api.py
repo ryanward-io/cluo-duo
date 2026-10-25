@@ -15,8 +15,10 @@ from .store import Store
 HUMAN: game.Side = "a"
 AI: game.Side = "b"
 
+# CORS: which web pages browsers will let read our responses. This is not access control;
+# non-browser clients ignore it. Abuse limits (rate limits, spend caps) must live on the server.
 ALLOWED_ORIGINS = ["https://ryanward.dev"]
-LOCAL_ORIGINS = r"http://(localhost|127\.0\.0\.1):\d+"  # any port, for local development
+LOCAL_ORIGINS = r"http://(localhost|127\.0\.0\.1):\d+"  # any port; only used by dev.py
 
 
 class NewGame(BaseModel):
@@ -34,9 +36,9 @@ class Guess(BaseModel):
     index: int = Field(ge=0, lt=game.BOARD_SIZE)
 
 
-def create_app(store: Store) -> FastAPI:
+def create_app(store: Store, allow_local: bool = False) -> FastAPI:
     app = FastAPI(title="Clue Words Duet", docs_url=None, redoc_url=None)
-    app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_origin_regex=LOCAL_ORIGINS,
+    app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_origin_regex=LOCAL_ORIGINS if allow_local else None,
                        allow_methods=["GET", "POST"],
                        allow_headers=["Content-Type"])
 

@@ -10,7 +10,7 @@ The point of the project is the AI partner: comparing word-vector and LLM partne
 
 - `src/cluewords/game.py`: the rules, as pure functions over a JSON-friendly state. The same code runs the web game and (later) the self-play evaluation.
 - `src/cluewords/players.py`: the player interface. A player implements `give_clue(view)` and `next_guess(view)`, and only ever sees what its side is allowed to know (`game.view`).
-- `src/cluewords/api.py`: a small FastAPI app. The human is side `a`; the server plays side `b` and keeps its key hidden until the game ends.
+- `src/cluewords/api.py`: a small FastAPI app. The human is side `a`; the server plays side `b` and keeps its key hidden until the game ends. Browsers only let pages on ryanward.dev read its responses (CORS), but that isn't access control: the API is public, so cost limits are enforced on the server.
 - `modal_app.py`: the infrastructure, deployed on [Modal](https://modal.com): container image, game storage (a Modal Dict), the web endpoint, and cost limits (scale to zero, at most two containers, 60 s request timeout).
 - `index.html`, `assets/`: a static front end on GitHub Pages that calls the API.
 

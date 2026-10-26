@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cluo Duo</title>
   <meta name="description" content="Free online Codenames Duet alternative: a two-player co-operative word game you play with an AI partner.">
-  <link rel="stylesheet" href="assets/app.css?v=202610270947">
-  <script src="assets/app.js?v=202610270947" type="module"></script>
+  <link rel="stylesheet" href="assets/app.css?v=202610271043">
+  <script src="assets/app.js?v=202610271043" type="module"></script>
 </head>
 <body>
   <header class="site">
@@ -33,30 +33,31 @@
           <label class="partner-card">
             <input type="radio" name="partner" value="random">
             <span class="tier">Random</span>
-            <span class="desc">Picks clues and guesses at random. A sanity check, not a teammate.</span>
+            <span class="desc">Picks clues and guesses at random.</span>
           </label>
           <label class="partner-card">
             <input type="radio" name="partner" value="glove-sum">
             <span class="tier">Primitive</span>
-            <span class="desc">Word associations from <span class="term" tabindex="0" aria-describedby="glove-tip">GloVe</span>. Adds up how close a clue is to each word on its key.</span>
-          </label>
-          <label class="partner-card">
-            <input type="radio" name="partner" value="glove-bayes">
-            <span class="tier">Basic</span>
-            <span class="desc">Primitive's clues, with guesses that also weigh what its own key implies about yours.</span>
+            <span class="desc">Word associations from a now outdated model, <span class="term" tabindex="0" aria-describedby="glove-tip">GloVe</span>.</span>
           </label>
           <label class="partner-card">
             <input type="radio" name="partner" value="glove-rank" checked>
-            <span class="tier">Clever</span>
-            <span class="desc">Only gives a clue when its targets clearly beat every danger word. The best <span class="term" tabindex="0" aria-describedby="glove-tip">GloVe</span> partner.</span>
+            <span class="tier">Basic</span>
+            <span class="desc">Primitive with some <span class="term" tabindex="0" aria-describedby="bayes-tip">Bayesian</span> game reasoning.</span>
+          </label>
+          <label class="partner-card soon">
+            <input type="radio" name="partner" value="llm-glove" disabled>
+            <span class="tier">Clever <span class="badge">Coming soon</span></span>
+            <span class="desc">A simple large language model working with GloVe.</span>
           </label>
           <label class="partner-card soon">
             <input type="radio" name="partner" value="llm" disabled>
             <span class="tier">Smart <span class="badge">Coming soon</span></span>
-            <span class="desc">A large language model, with GloVe double-checking its clues for danger words.</span>
+            <span class="desc">A pioneering large language model.</span>
           </label>
         </div>
-        <p id="glove-tip" class="tip" role="tooltip">GloVe: word vectors learned from billions of words of web text. Words that turn up in similar places get similar vectors, so closeness stands in for meaning, but only roughly.</p>
+        <p id="glove-tip" class="tip" role="tooltip">GloVe: word vectors learned from billions of words of web text. Words that turn up in similar places get similar vectors, so closeness gets associated with meaning.</p>
+        <p id="bayes-tip" class="tip" role="tooltip">Bayesian: weighs its guesses using what the board and its own key reveal, and only gives clues when its targets clearly beat danger words.</p>
       </fieldset>
 
       <button id="start" type="button">Start game</button>

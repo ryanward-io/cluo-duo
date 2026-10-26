@@ -11,7 +11,8 @@ function skull(cls) {
   i.innerHTML = SKULL;
   return i;
 }
-const PARTNERS = { random: "Random", "glove-sum": "Primitive", "glove-bayes": "Basic", "glove-rank": "Clever", llm: "Smart" };
+const PARTNERS = { random: "Random", "glove-sum": "Primitive", "glove-bayes": "Primitive + Bayesian", "glove-rank": "Basic",
+  "llm-glove": "Clever", llm: "Smart" };
 const OUTCOME = { G: "agent", N: "bystander", A: "assassin" };
 const RESULT = {
   won: "You found all 15 agents. You win!",
@@ -215,8 +216,10 @@ function quitToMenu() {
 
 $("#quit").addEventListener("click", quitToMenu);
 
-// The GloVe explainer text lives once in the page (for screen readers); copy it into each tooltip.
-for (const term of document.querySelectorAll(".term")) term.dataset.tip = $("#glove-tip").textContent;
+// Each explainer's text lives once in the page (for screen readers); copy it into its tooltips.
+for (const term of document.querySelectorAll(".term")) {
+  term.dataset.tip = document.getElementById(term.getAttribute("aria-describedby")).textContent;
+}
 
 $("#start").addEventListener("click", () => {
   const first = document.querySelector('input[name="first"]:checked').value;

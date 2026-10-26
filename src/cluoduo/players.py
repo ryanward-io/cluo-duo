@@ -70,7 +70,22 @@ def _glove_rank(seed=None, **kwargs):
     return GloveRankPlayer(seed, **kwargs)
 
 
-PLAYERS = {"random": RandomPlayer, "glove-sum": _glove_sum, "glove-bayes": _glove_bayes, "glove-rank": _glove_rank}
+def _qwen(seed=None, **kwargs):
+    from .llm import LLMPlayer
+
+    return LLMPlayer(seed, **kwargs)
+
+
+def _qwen_think(seed=None, **kwargs):
+    from .llm import LLMPlayer
+
+    p = LLMPlayer(seed, thinking=True, **kwargs)
+    p.name = "qwen-think"
+    return p
+
+
+PLAYERS = {"random": RandomPlayer, "glove-sum": _glove_sum, "glove-bayes": _glove_bayes, "glove-rank": _glove_rank,
+           "qwen": _qwen, "qwen-think": _qwen_think}
 
 MAX_CLUE_ATTEMPTS = 3
 

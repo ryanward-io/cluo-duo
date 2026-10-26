@@ -1,3 +1,4 @@
+import json
 from collections import Counter
 
 import pytest
@@ -142,3 +143,50 @@ def test_key_prior_updates_after_a_revealed_bystander():
     prior = key_prior(game.view(s, "a"))
     agent = next(i for i in prior if mine[i] == "G")
     assert prior[agent] == pytest.approx({"G": 3 / 8, "N": 4 / 8, "A": 1 / 8})
+
+
+def _fake_backend(replies):
+    calls = []
+
+    def chat(messages, **kwargs):
+        calls.append(messages)
+        return {"content": json.dumps(replies[min(len(calls), len(replies)) - 1])}
+
+    return chat, calls
+
+
+def test_llm_clue_retries_with_the_reason_then_accepts():
+    from cluoduo.llm import LLMPlayer
+
+    s = game.new_game(seed=2, first_clue="b")
+    v = game.view(s, "b")
+    agent = next(w for w, k in zip(v["words"], v["my_key"]) if k == "G")
+    chat, calls = _fake_backend([
+        {"targets": [agent], "reason": "", "clue": v["words"][0], "number": 1},  # a board word: not allowed
+        {"targets": [agent], "reason": "", "clue": "ocean", "number": 3},
+    ])
+    clue, number = LLMPlayer(backend=chat, fallback=RandomPlayer(0)).give_clue(v)
+    assert clue == "OCEAN" and number == 1  # number capped at the valid targets it named
+    assert len(calls) == 2 and "isn't allowed" in calls[1][-1]["content"]
+
+
+def test_llm_falls_back_after_repeated_bad_clues():
+    from cluoduo.llm import MAX_ATTEMPTS, LLMPlayer
+
+    v = game.view(game.new_game(seed=2, first_clue="b"), "b")
+    chat, calls = _fake_backend([{"targets": [], "reason": "", "clue": "", "number": 1}])
+    clue, number = LLMPlayer(backend=chat, fallback=RandomPlayer(0)).give_clue(v)
+    assert len(calls) == MAX_ATTEMPTS and clue.isalpha()
+
+
+def test_llm_guesses_in_order_and_skips_nonsense():
+    from cluoduo.llm import LLMPlayer
+
+    s = game.give_clue(game.new_game(seed=2, first_clue="b"), "b", "ZZZ", 2)
+    v = game.view(s, "a")
+    w = s["words"]
+    chat, calls = _fake_backend([{"reason": "", "guesses": ["not on board", w[3].lower(), w[3], w[7]]}])
+    p = LLMPlayer(backend=chat, fallback=RandomPlayer(0))
+    assert p.next_guess(v) == 3
+    v["clue"] = dict(v["clue"], guesses=1)
+    assert p.next_guess(v) == 7 and len(calls) == 1  # one model call per turn

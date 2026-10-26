@@ -16,6 +16,7 @@ about 0.8 for very close ones (see scripts/prepare_vectors.py).
 from __future__ import annotations
 
 import os
+import zlib
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -79,13 +80,18 @@ class GloveSumPlayer:
 
     # Defaults tuned by self-play on boards 0-99, then checked on boards 10000-10299 (22% wins). See README.
     def __init__(self, seed: int | None = None, *, link_threshold: float = 0.35, agent_weight: float = 1.0,
-                 bystander_weight: float = 0.25, assassin_weight: float = 1.0, vectors: Vectors | None = None):
+                 bystander_weight: float = 0.25, assassin_weight: float = 1.0, guess_noise: float = 0.0,
+                 vectors: Vectors | None = None):
         self.v = vectors or load_vectors()
         self.cache = BoardCache(self.v)
         self.link_threshold = link_threshold
         self.agent_weight = agent_weight
         self.bystander_weight = bystander_weight
         self.assassin_weight = assassin_weight
+        # Evaluation only: blur the guesser's similarities so it no longer shares the clue-giver's
+        # exact associations (a stand-in for a human or a different model). 0 in the live game.
+        self.guess_noise = guess_noise
+        self.seed = seed or 0
 
     # ---------- giving clues ----------
 
@@ -117,6 +123,17 @@ class GloveSumPlayer:
 
     # ---------- guessing ----------
 
+    def clue_similarities(self, view: dict, cards: list[int]) -> np.ndarray:
+        """Similarity of the current clue to each card, plus this guesser's fixed noise (if any)."""
+        clue_vec = self.v.matrix[self.v.index[view["clue"]["word"]]]
+        sims = self.v.matrix[self.v.ids([view["words"][i] for i in cards])] @ clue_vec
+        if self.guess_noise:
+            # Same clue on the same board always gets the same noise, so a turn's guesses are consistent.
+            tag = f"{self.seed}|{view['clue']['word']}|{','.join(view['words'])}".encode()
+            rng = np.random.default_rng(zlib.crc32(tag))
+            sims = sims + self.guess_noise * rng.standard_normal(game.BOARD_SIZE)[cards]
+        return sims
+
     def next_guess(self, view: dict) -> int | None:
         clue = view["clue"]
         if clue["guesses"] >= max(clue["number"], 1):
@@ -126,9 +143,7 @@ class GloveSumPlayer:
             return None
         if clue["word"] not in self.v.index:
             return options[0]  # a clue word GloVe doesn't know: nothing better to go on
-        clue_vec = self.v.matrix[self.v.index[clue["word"]]]
-        board_vecs = self.v.matrix[self.v.ids([view["words"][i] for i in options])]
-        return options[int(np.argmax(board_vecs @ clue_vec))]
+        return options[int(np.argmax(self.clue_similarities(view, options)))]
 
 
 # ---------- v1 + Bayesian guessing ----------
@@ -191,11 +206,11 @@ class GloveBayesPlayer(GloveSumPlayer):
         prior = key_prior(view)
         if clue["word"] not in self.v.index:
             return prior
-        clue_vec = self.v.matrix[self.v.index[clue["word"]]]
+        cards = list(prior)
+        sims = dict(zip(cards, self.clue_similarities(view, cards)))
         post = {}
         for i, p in prior.items():
-            sim = float(self.v.matrix[self.v.index[view["words"][i]]] @ clue_vec)
-            ratio = np.exp((sim - self.mu) / self.tau)
+            ratio = np.exp((sims[i] - self.mu) / self.tau)
             z = p["G"] * ratio + p["N"] + p["A"]
             post[i] = {"G": p["G"] * ratio / z, "N": p["N"] / z, "A": p["A"] / z}
         return post
@@ -212,3 +227,55 @@ class GloveBayesPlayer(GloveSumPlayer):
         if clue["guesses"] > 0 and value[best] < 0:
             return None  # the next guess is more likely to hurt than help
         return best
+
+
+# ---------- v2 clues: rankings instead of sums ----------
+
+class GloveRankPlayer(GloveBayesPlayer):
+    """v2 clues plus the Bayesian guesser.
+
+    The partner guesses words in order of similarity to the clue, so what matters is the
+    *ranking*: a clue for k agents works if those k agents are all more similar to the clue
+    than every bystander and assassin still in play, by a safety margin. For each candidate
+    clue, take my agents from most to least similar; the clue can cover the top k if the
+    k-th agent is at least `link_threshold` similar, beats the closest bystander by
+    `bystander_margin` and the closest assassin by `assassin_margin`. Choose the clue that
+    covers the most agents; break ties by the widest margin.
+    """
+
+    name = "glove-rank"
+
+    # Tuned on boards 0-99 against a *noisy* guesser (guess_noise 0.05 and 0.1), because with
+    # identical vectors on both sides almost any setting wins (the "private language" problem).
+    def __init__(self, seed: int | None = None, *, bystander_margin: float = 0.05,
+                 assassin_margin: float = 0.1, link_threshold: float = 0.3, **kwargs):
+        super().__init__(seed, link_threshold=link_threshold, **kwargs)
+        self.bystander_margin, self.assassin_margin = bystander_margin, assassin_margin
+
+    def give_clue(self, view: dict) -> tuple[str, int]:
+        sims, legal = self.cache.get(view["words"])
+        key = view["my_key"]
+        cards = open_cards(view, view["side"])
+        agents = [i for i in cards if key[i] == game.GREEN]
+        worst_bystander = sims[:, [i for i in cards if key[i] == game.BYSTANDER] or [0]].max(axis=1)
+        if not any(key[i] == game.BYSTANDER for i in cards):
+            worst_bystander = np.full(len(sims), -1.0)
+        assassin_ids = [i for i in cards if key[i] == game.ASSASSIN]
+        worst_assassin = sims[:, assassin_ids].max(axis=1) if assassin_ids else np.full(len(sims), -1.0)
+
+        ranked = -np.sort(-sims[:, agents], axis=1)  # each clue's agent similarities, highest first
+        best, best_k, best_margin = None, 0, -np.inf
+        for k in range(len(agents), 0, -1):
+            kth = ranked[:, k - 1]
+            margin = np.minimum(kth - worst_bystander - self.bystander_margin,
+                                kth - worst_assassin - self.assassin_margin)
+            ok = legal & (kth >= self.link_threshold) & (margin >= 0)
+            if ok.any():
+                margins = np.where(ok, margin, -np.inf)
+                best, best_k, best_margin = int(np.argmax(margins)), k, float(margins.max())
+                break
+        if best is None:
+            # Nothing passes the rules: give the safest single-agent clue available.
+            margin = np.minimum(ranked[:, 0] - worst_bystander, ranked[:, 0] - worst_assassin)
+            best, best_k = int(np.argmax(np.where(legal, margin, -np.inf))), 1
+        return self.v.words[self.v.clue_ids[best]], best_k

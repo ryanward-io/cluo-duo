@@ -27,9 +27,13 @@ def main() -> None:
     p.add_argument("second", choices=sorted(PLAYERS))
     p.add_argument("--games", type=int, default=500)
     p.add_argument("--first-seed", type=int, default=20000)
+    p.add_argument("--noise", type=float, default=0.0, help="guess_noise for GloVe players: a guesser that doesn't share the clue-giver's exact associations")
     args = p.parse_args()
 
-    players = {name: (PLAYERS[name](seed=1), PLAYERS[name](seed=2)) for name in (args.first, args.second)}
+    def make(name, seed):
+        return PLAYERS[name](seed=seed, guess_noise=args.noise) if name.startswith("glove") else PLAYERS[name](seed=seed)
+
+    players = {name: (make(name, 1), make(name, 2)) for name in (args.first, args.second)}
     wins = {name: 0 for name in players}
     assassins = {name: 0 for name in players}
     only = {name: 0 for name in players}

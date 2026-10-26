@@ -102,7 +102,11 @@ def test_glove_partner_plays_legal_games():
         pytest.skip("word vectors not built (scripts/prepare_vectors.py)")
     from cluoduo.players import PLAYERS
 
-    a, b = PLAYERS["glove-sum"](), PLAYERS["glove-sum"]()
+    for name in ("glove-sum", "glove-bayes", "glove-rank"):
+        _plays_legal_games(PLAYERS[name](), PLAYERS[name](guess_noise=0.05))
+
+
+def _plays_legal_games(a, b):
     for seed in range(5):
         s = self_play(a, b, seed=seed)
         assert s["phase"] == "over"

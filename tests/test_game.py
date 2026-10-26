@@ -190,3 +190,32 @@ def test_llm_guesses_in_order_and_skips_nonsense():
     assert p.next_guess(v) == 3
     v["clue"] = dict(v["clue"], guesses=1)
     assert p.next_guess(v) == 7 and len(calls) == 1  # one model call per turn
+
+
+def test_hybrid_vets_candidates_with_glove():
+    from cluoduo.glove import GloveRankPlayer
+    from cluoduo.llm import HybridPlayer
+
+    v = game.view(game.new_game(seed=2, first_clue="b"), "b")
+    agents = [w for w, k in zip(v["words"], v["my_key"]) if k == "G"]
+    candidates = [
+        {"targets": agents[:3], "clue": v["words"][0]},  # a board word
+        {"targets": agents[:2], "clue": "zzzqx"},  # not in the vocabulary
+        {"targets": agents[:3], "clue": "water"},
+        {"targets": agents[3:6], "clue": "music"},
+    ]
+    chat, calls = _fake_backend([{"candidates": candidates}])
+    p = HybridPlayer(backend=chat, fallback=GloveRankPlayer(0))
+    clue, number = p.give_clue(v)
+    results = [p.vet(v, c) for c in candidates]
+    assert results[0]["number"] == 0 and "board" in results[0]["problem"]
+    assert results[1]["number"] == 0 and "vocabulary" in results[1]["problem"]
+    safe = [r for r in results if r["number"] > 0]
+    for r in safe:
+        assert set(r["kept"]) <= set(r["targets"]) and r["margin"] >= 0
+    if safe:
+        best = max(safe, key=lambda r: (r["number"], r["margin"]))
+        assert (clue, number) == (best["clue"], best["number"])
+    else:
+        assert p.log[-1] == {"fallback": "clue"}  # nothing safe: GloVe v2 gives the clue
+    assert len(calls) == 1

@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cluo Duo</title>
   <meta name="description" content="Free online Codenames Duet alternative: a two-player co-operative word game you play with an AI partner.">
-  <link rel="stylesheet" href="assets/app.css?v=202610261617">
-  <script src="assets/app.js?v=202610261617" type="module"></script>
+  <link rel="stylesheet" href="assets/app.css?v=202610270947">
+  <script src="assets/app.js?v=202610270947" type="module"></script>
 </head>
 <body>
   <header class="site">
@@ -19,21 +19,46 @@
 
     <section id="setup" class="panel">
       <h2>New game</h2>
-      <div class="row">
-        <fieldset>
-          <legend>Who gives the first clue?</legend>
-          <label><input type="radio" name="first" value="partner" checked> My partner</label>
-          <label><input type="radio" name="first" value="human"> Me</label>
-        </fieldset>
-        <label class="stack">Partner
-          <select id="partner">
-            <option value="glove-rank" selected>GloVe v2 (ranked clues + Bayesian guessing)</option>
-            <option value="glove-bayes">GloVe + Bayesian guessing</option>
-            <option value="glove-sum">GloVe word vectors (v1)</option>
-            <option value="random">Random (guesses blindly)</option>
-          </select>
-        </label>
-      </div>
+      <fieldset class="first-clue">
+        <legend>Who gives the first clue?</legend>
+        <div class="segmented">
+          <label><input type="radio" name="first" value="partner" checked><span>My partner</span></label>
+          <label><input type="radio" name="first" value="human"><span>Me</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="partners">
+        <legend>Choose your partner</legend>
+        <div class="partner-grid">
+          <label class="partner-card">
+            <input type="radio" name="partner" value="random">
+            <span class="tier">Random</span>
+            <span class="desc">Picks clues and guesses at random. A sanity check, not a teammate.</span>
+          </label>
+          <label class="partner-card">
+            <input type="radio" name="partner" value="glove-sum">
+            <span class="tier">Primitive</span>
+            <span class="desc">Word associations from <span class="term" tabindex="0" aria-describedby="glove-tip">GloVe</span>. Adds up how close a clue is to each word on its key.</span>
+          </label>
+          <label class="partner-card">
+            <input type="radio" name="partner" value="glove-bayes">
+            <span class="tier">Basic</span>
+            <span class="desc">Primitive's clues, with guesses that also weigh what its own key implies about yours.</span>
+          </label>
+          <label class="partner-card">
+            <input type="radio" name="partner" value="glove-rank" checked>
+            <span class="tier">Clever</span>
+            <span class="desc">Only gives a clue when its targets clearly beat every danger word. The best <span class="term" tabindex="0" aria-describedby="glove-tip">GloVe</span> partner.</span>
+          </label>
+          <label class="partner-card soon">
+            <input type="radio" name="partner" value="llm" disabled>
+            <span class="tier">Smart <span class="badge">Coming soon</span></span>
+            <span class="desc">A large language model, with GloVe double-checking its clues for danger words.</span>
+          </label>
+        </div>
+        <p id="glove-tip" class="tip" role="tooltip">GloVe: word vectors learned from billions of words of web text. Words that turn up in similar places get similar vectors, so closeness stands in for meaning, but only roughly.</p>
+      </fieldset>
+
       <button id="start" type="button">Start game</button>
       <details class="rules">
         <summary>How to play</summary>

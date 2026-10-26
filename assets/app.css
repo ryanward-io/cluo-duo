@@ -139,3 +139,44 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .assassin-icon.partner { color: var(--theirs); }
 .legend .assassin-icon { vertical-align: -3px; }
 .hint { font-size: 0.8rem; }
+
+/* ---------- setup: who starts, and partner cards ---------- */
+#setup fieldset { display: block; margin-bottom: 18px; }
+#setup legend { margin-bottom: 8px; }
+.segmented {
+  display: inline-flex; padding: 3px; gap: 3px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg);
+}
+.segmented label { position: relative; }
+.segmented input, .partner-card input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.segmented span { display: block; padding: 7px 16px; border-radius: 7px; cursor: pointer; font-weight: 500; color: var(--muted); }
+.segmented label:hover span { color: var(--text); }
+.segmented input:checked + span { background: var(--accent); color: var(--accent-text); font-weight: 600; }
+.segmented input:focus-visible + span { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.partner-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.partner-card {
+  position: relative; display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--bg);
+}
+.partner-card:hover { border-color: var(--muted); }
+.partner-card:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+.partner-card:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
+.partner-card .tier { font-size: 1.25rem; font-weight: 700; line-height: 1.2; }
+.partner-card .desc { font-size: 0.82rem; line-height: 1.4; color: var(--muted); }
+.partner-card.soon { cursor: not-allowed; opacity: 0.6; border-style: dashed; }
+.badge {
+  display: inline-block; vertical-align: 3px; margin-left: 4px; padding: 1px 7px; border-radius: 999px;
+  font-size: 0.7rem; font-weight: 600; border: 1px solid var(--border); color: var(--muted);
+}
+
+/* GloVe explainer: shown on hover or keyboard focus, sized to the card so it never runs off-screen. */
+.term { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; color: var(--text); }
+.term::after {
+  content: attr(data-tip); position: absolute; left: 6px; width: max(calc(100% - 12px), 260px); top: calc(100% + 6px); z-index: 10;
+  padding: 8px 10px; border-radius: 8px; background: var(--text); color: var(--bg);
+  font-size: 0.8rem; font-weight: 400; line-height: 1.4; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  visibility: hidden; opacity: 0; transition: opacity 0.12s;
+}
+.term:hover::after, .term:focus-visible::after, .term:focus::after { visibility: visible; opacity: 1; }
+.tip { display: none; }
+@media (prefers-reduced-motion: reduce) { .term::after { transition: none; } }

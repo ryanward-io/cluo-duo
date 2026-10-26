@@ -70,22 +70,29 @@ def _glove_rank(seed=None, **kwargs):
     return GloveRankPlayer(seed, **kwargs)
 
 
-def _qwen(seed=None, **kwargs):
-    from .llm import LLMPlayer
+def _llm(name, cls="LLMPlayer", **fixed):
+    """Factory for an LLM partner: which player class, which model server, thinking on or off."""
+    def make(seed=None, **kwargs):
+        from . import llm
 
-    return LLMPlayer(seed, **kwargs)
+        player = getattr(llm, cls)(seed, **fixed, **kwargs)
+        player.name = name
+        return player
 
-
-def _qwen_think(seed=None, **kwargs):
-    from .llm import LLMPlayer
-
-    p = LLMPlayer(seed, thinking=True, **kwargs)
-    p.name = "qwen-think"
-    return p
+    return make
 
 
-PLAYERS = {"random": RandomPlayer, "glove-sum": _glove_sum, "glove-bayes": _glove_bayes, "glove-rank": _glove_rank,
-           "qwen": _qwen, "qwen-think": _qwen_think}
+PLAYERS = {
+    "random": RandomPlayer, "glove-sum": _glove_sum, "glove-bayes": _glove_bayes, "glove-rank": _glove_rank,
+    # Qwen3-8B on an L4
+    "qwen": _llm("qwen"),
+    "qwen-think": _llm("qwen-think", thinking=True),
+    "qwen-hybrid": _llm("qwen-hybrid", "HybridPlayer"),
+    # Qwen3.6-35B-A3B on an L40S
+    "qwen36": _llm("qwen36", server="Qwen36"),
+    "qwen36-think": _llm("qwen36-think", server="Qwen36", thinking=True),
+    "qwen36-hybrid": _llm("qwen36-hybrid", "HybridPlayer", server="Qwen36"),
+}
 
 MAX_CLUE_ATTEMPTS = 3
 

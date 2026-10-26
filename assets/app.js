@@ -11,6 +11,7 @@ function skull(cls) {
   i.innerHTML = SKULL;
   return i;
 }
+const PARTNERS = { random: "Random", "glove-sum": "Primitive", "glove-bayes": "Basic", "glove-rank": "Clever", llm: "Smart" };
 const OUTCOME = { G: "agent", N: "bystander", A: "assassin" };
 const RESULT = {
   won: "You found all 15 agents. You win!",
@@ -84,7 +85,7 @@ function render(before = null) {
   if (!state) return;
   $("#found").textContent = `Agents found: ${state.found_count} / ${state.total_agents}`;
   $("#turns").textContent = `Turns left: ${state.turns_left}`;
-  $("#partner-name").textContent = `Partner: ${state.partner}`;
+  $("#partner-name").textContent = `Partner: ${PARTNERS[state.partner] || state.partner}`;
   renderBoard(before);
   renderLog();
   renderAction();
@@ -209,10 +210,13 @@ function quitToMenu() {
   $("#error").textContent = "";
   render();
   $("#setup").scrollIntoView({ block: "start" });
-  $("#partner").focus();
+  document.querySelector('input[name="partner"]:checked').focus();
 }
 
 $("#quit").addEventListener("click", quitToMenu);
+
+// The GloVe explainer text lives once in the page (for screen readers); copy it into each tooltip.
+for (const term of document.querySelectorAll(".term")) term.dataset.tip = $("#glove-tip").textContent;
 
 $("#start").addEventListener("click", () => {
   const first = document.querySelector('input[name="first"]:checked').value;
@@ -220,7 +224,8 @@ $("#start").addEventListener("click", () => {
   setupOpen = false;
   render();
   $("#game").hidden = false;
-  act("/api/games", { first, partner: $("#partner").value }, "Setting up the board…");
+  const partner = document.querySelector('input[name="partner"]:checked').value;
+  act("/api/games", { first, partner }, "Setting up the board…");
 });
 
 (async () => {

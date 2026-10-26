@@ -21,6 +21,7 @@ const RESULT = {
 let state = null;
 let busy = false;
 let setupOpen = true;
+let generation = 0; // bumped when the player leaves a game, so late replies for it are ignored
 
 function el(tag, attrs = {}, ...children) {
   const n = document.createElement(tag);
@@ -60,8 +61,11 @@ async function act(path, body, thinking = "Your partner is thinking…") {
   renderAction(thinking);
   const slow = setTimeout(() => renderAction(`${thinking} (the server may be waking up; this can take a few seconds)`), 3000);
   const before = state;
+  const gen = generation;
   try {
-    state = await call(path, body);
+    const next = await call(path, body);
+    if (gen !== generation) return; // the player quit while we were waiting
+    state = next;
     save(state.phase === "over" ? null : state.id);
   } catch (err) {
     $("#error").textContent = err.message;
@@ -192,7 +196,23 @@ function renderAction(message) {
   box.replaceChildren(el("p", {}, "Waiting for your partner…"));
 }
 
-// ---------- start ----------
+// ---------- start and quit ----------
+
+function quitToMenu() {
+  const inProgress = state && state.phase !== "over";
+  if (inProgress && !confirm("Leave this game and go back to the menu? You won't be able to come back to it.")) return;
+  generation += 1;
+  busy = false;
+  save(null);
+  state = null;
+  setupOpen = true;
+  $("#error").textContent = "";
+  render();
+  $("#setup").scrollIntoView({ block: "start" });
+  $("#partner").focus();
+}
+
+$("#quit").addEventListener("click", quitToMenu);
 
 $("#start").addEventListener("click", () => {
   const first = document.querySelector('input[name="first"]:checked').value;

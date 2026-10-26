@@ -80,7 +80,10 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .rules li { margin: 4px 0; }
 
 .scoreboard { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0 0 10px; font-weight: 600; }
+.scoreboard { align-items: center; }
 .scoreboard .muted { font-weight: 400; }
+button.small { padding: 4px 12px; font-size: 0.9rem; font-weight: 400; }
+#quit { margin-left: auto; }
 
 .board { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 @media (max-width: 520px) { .board { gap: 4px; } .card { padding: 18px 2px 8px; letter-spacing: 0; } }

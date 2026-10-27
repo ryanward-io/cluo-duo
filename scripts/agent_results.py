@@ -49,6 +49,8 @@ ROUNDS = {
     "v8 (Sonnet)": range(120, 128),
     "v9 (Haiku)": range(128, 136),
     "v9 (Sonnet)": range(136, 144),
+    "v10 (Sonnet)": range(144, 152),
+    "v10 (Haiku)": range(152, 160),
 }
 
 

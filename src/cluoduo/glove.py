@@ -331,12 +331,16 @@ class GloveRankPlayer(GloveBayesPlayer):
 
     # Tuned on boards 0-99 against a *noisy* guesser (guess_noise 0.05 and 0.1), because with
     # identical vectors on both sides almost any setting wins (the "private language" problem).
-    # leftover_min 0.7 (Ryan's idea: use earlier clues that hit a bystander) was tuned on boards
-    # 0-299, then on boards 20000-20999 won 79.2% vs 76.3% without it (McNemar p = 0.001).
+    # Defaults are tuned for a partner who is NOT GloVe (a person), measured with a Claude
+    # reference partner on shared boards, not for self-play:
+    # - max_number 3: big clues (DEER 5) only work when both sides share the vectors. Capping
+    #   costs self-play (77% -> 73%) but did better with a real partner.
+    # - leftover_min 1.0 (off): leftover guesses won in self-play (79.2% vs 76.3%, p = 0.001) but
+    #   cost a game with a real partner. Set 0.7 to switch them on.
     def __init__(self, seed: int | None = None, *, bystander_margin: float = 0.05,
                  assassin_margin: float = 0.1, link_threshold: float = 0.3,
                  stretch_slack: float = 0.0, stretch_assassin_margin: float = 0.2,
-                 leftover_min: float = 0.7, max_number: int = 9, **kwargs):
+                 leftover_min: float = 1.0, max_number: int = 3, **kwargs):
         super().__init__(seed, link_threshold=link_threshold, leftover_min=leftover_min, **kwargs)
         # Self-play rewards big numbers (DEER 5) because both sides share the vectors; a human
         # (or another model) can't follow them. max_number caps the clue size.

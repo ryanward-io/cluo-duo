@@ -88,10 +88,12 @@ PLAYERS = {
     "qwen": _llm("qwen"),
     "qwen-think": _llm("qwen-think", thinking=True),
     "qwen-hybrid": _llm("qwen-hybrid", "HybridPlayer"),
+    "qwen-sim": _llm("qwen-sim", "SimulatingPlayer"),
     # Qwen3.6-35B-A3B on an L40S
     "qwen36": _llm("qwen36", server="Qwen36"),
     "qwen36-think": _llm("qwen36-think", server="Qwen36", thinking=True),
     "qwen36-hybrid": _llm("qwen36-hybrid", "HybridPlayer", server="Qwen36"),
+    "qwen36-sim": _llm("qwen36-sim", "SimulatingPlayer", server="Qwen36"),
 }
 
 MAX_CLUE_ATTEMPTS = 3

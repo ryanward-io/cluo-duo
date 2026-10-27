@@ -7,9 +7,8 @@ Design:
 - Replies are forced into a JSON schema built for the current board, so the model can only
   name its own unfound agents as targets (1-3 of them) and only guess words still in play.
   The first version let it say anything and it gave clues like "SHAPE 9".
-- The guesser is not shown its own key: with it, the model guessed its *own* agents instead of
-  following the clue. (The key carries a little information about the partner's, which the
-  GloVe Bayesian guesser uses, but the model couldn't use it well.)
+- The guesser sees only its own ASSASSINS, not its whole key (see guess_messages), and guesses
+  at most the clue's number of words.
 - The prompt includes the whole game so far (every clue and guess), so the model "remembers"
   earlier clues, e.g. a repeated clue that hasn't been fully used yet.
 - Everything the model says is checked against the rules here. An invalid clue goes back to
@@ -50,24 +49,10 @@ def clue_schema(agents: list[str]) -> dict:
         "properties": {
             "targets": {"type": "array", "items": {"enum": agents}, "minItems": 1, "maxItems": min(MAX_TARGETS, len(agents)),
                         "description": "1 to 3 of your AGENT words that share one strong, specific link"},
-            "reason": {"type": "string", "description": "one short sentence: the link, and why it doesn't point at an ASSASSIN or bystander"},
+            "reason": {"type": "string", "maxLength": 300, "description": "one short sentence: the link, and why it doesn't point at an ASSASSIN or bystander"},
             "clue": CLUE_WORD,
         },
         "required": ["targets", "reason", "clue"],
-        "additionalProperties": False,
-    }
-
-
-def guess_schema(open_words: list[str], number: int) -> dict:
-    return {
-        "type": "object",
-        "properties": {
-            "reason": {"type": "string", "description": "one short sentence on what the clue most likely means"},
-            "guesses": {"type": "array", "items": {"enum": open_words}, "minItems": 1,
-                        "maxItems": min(len(open_words), max(number, 1) + 1),
-                        "description": "board words to guess, most confident first; only as many as are worth the risk"},
-        },
-        "required": ["reason", "guesses"],
         "additionalProperties": False,
     }
 
@@ -88,11 +73,15 @@ def describe_history(view: dict) -> str:
     return "\n".join(lines) or "(no turns yet)"
 
 
-def describe_board(view: dict, show_key: bool) -> str:
+def describe_board(view: dict, show_key: bool, warn_assassins: bool = False) -> str:
+    """The 25 words with what's known about each. `show_key` adds my whole key (for clue giving);
+    `warn_assassins` marks only my assassins (for guessing; see guess_messages)."""
     me, partner = view["side"], game.other(view["side"])
     rows = []
     for i, word in enumerate(view["words"]):
         notes = []
+        if warn_assassins and not show_key and view["my_key"][i] == game.ASSASSIN and not view["found"][i]:
+            notes.append("an ASSASSIN on YOUR key: 1 in 3 chance it is one on your partner's key too")
         if view["found"][i]:
             notes.append("already found (out of play)")
         if i in view["bystanders"][me]:
@@ -124,14 +113,15 @@ class LLMPlayer:
             self._fallback = GloveRankPlayer(self.seed)
         return self._fallback
 
-    def _ask(self, messages: list[dict], schema: dict) -> dict:
+    def _ask(self, messages: list[dict], schema: dict, kind: str) -> dict:
+        """One model call; `kind` (clue, guess or rehearsal) labels it in the log."""
         reply = self.backend(messages, schema=schema, thinking=self.thinking, seed=self.seed + len(self.log),
                              max_tokens=THINKING_TOKENS if self.thinking else 600)
         try:
             data = json.loads(reply["content"])
         except (json.JSONDecodeError, KeyError, TypeError):
             data = {}
-        self.log.append({"messages": messages, "reply": reply, "parsed": data})
+        self.log.append({"kind": kind, "messages": messages, "reply": reply, "parsed": data})
         return data
 
     # ---------- giving clues ----------
@@ -151,7 +141,7 @@ class LLMPlayer:
             )},
         ]
         for _ in range(MAX_ATTEMPTS):
-            data = self._ask(messages, clue_schema(agents))
+            data = self._ask(messages, clue_schema(agents), "clue")
             problem = self._clue_problem(view, data, agents)
             if problem is None:
                 targets = {t.upper() for t in data["targets"]} & set(agents)
@@ -197,26 +187,52 @@ class LLMPlayer:
     def _plan_guesses(self, view: dict) -> list[int]:
         clue = view["clue"]
         open_words = [w for i, w in enumerate(view["words"]) if game.can_guess(view, i)]
-        messages = [
-            {"role": "system", "content": RULES},
-            {"role": "user", "content": (
-                f"Board:\n{describe_board(view, show_key=False)}\n\n"
-                f"Game so far:\n{describe_history(view)}\n\n"
-                f"Your partner's clue is {clue['word']} {clue['number']}: they are pointing at {clue['number']} word(s) "
-                "that are AGENTS on THEIR key. Words you can guess: " + ", ".join(open_words) + ".\n"
-                "Pick the words most strongly linked to the clue, most confident first. Usually guess exactly the "
-                "number given; add one more only if an earlier clue from your partner clearly still points at a word. "
-                "A wrong guess can hit an ASSASSIN, so leave out words you are unsure of."
-            )},
-        ]
-        data = self._ask(messages, guess_schema(open_words, clue["number"]))
+        data = self._ask(guess_messages(view, clue["word"], clue["number"], open_words),
+                         guess_schema(open_words, clue["number"]), "guess")
         index = {w: i for i, w in enumerate(view["words"])}
         plan = []
         for w in data.get("guesses", []):
             i = index.get(str(w).strip().upper())
             if i is not None and i not in plan:
                 plan.append(i)
-        return plan[:max(clue["number"], 1) + 1]
+        return plan[:max(clue["number"], 1)]
+
+
+def guess_messages(view: dict, clue_word: str, number: int, open_words: list[str], own_key: bool = True) -> list[dict]:
+    """The guesser's prompt.
+
+    Only my ASSASSINS are marked, not my whole key. With the whole key the model guessed its own
+    agents instead of following the clue; with no key at all it walked into words that were
+    assassins on its own key (more than half of the assassin hits in one evaluation), and each of
+    those is an assassin on the partner's key too with probability 1/3 (game.KEY_LAYOUT).
+    `own_key=False` drops the marks, for the clue giver rehearsing how its partner will guess.
+    """
+    return [
+        {"role": "system", "content": RULES},
+        {"role": "user", "content": (
+            f"Board:\n{describe_board(view, show_key=False, warn_assassins=own_key)}\n\n"
+            f"Game so far:\n{describe_history(view)}\n\n"
+            f"Your partner's clue is {clue_word} {number}: they are pointing at {number} word(s) "
+            "that are AGENTS on THEIR key. Words you can guess: " + ", ".join(open_words) + ".\n"
+            f"Pick at most {max(number, 1)} word(s) most strongly linked to the clue, most confident first. "
+            "A wrong guess can hit an ASSASSIN, so leave out words you are unsure of"
+            + (", and avoid words that are ASSASSINS on your own key unless the clue clearly means them." if own_key else ".")
+        )},
+    ]
+
+
+def guess_schema(open_words: list[str], number: int) -> dict:
+    return {
+        "type": "object",
+        "properties": {
+            "reason": {"type": "string", "maxLength": 300, "description": "one short sentence on what the clue most likely means"},
+            "guesses": {"type": "array", "items": {"enum": open_words}, "minItems": 1,
+                        "maxItems": min(len(open_words), max(number, 1)),
+                        "description": "board words to guess, most confident first; only as many as are worth the risk"},
+        },
+        "required": ["reason", "guesses"],
+        "additionalProperties": False,
+    }
 
 
 class HybridPlayer(LLMPlayer):
@@ -260,14 +276,17 @@ class HybridPlayer(LLMPlayer):
                 "Avoid clues that also suggest an ASSASSIN or bystander. A separate check will pick the safest."
             )},
         ]
-        data = self._ask(messages, candidates_schema(agents, self.CANDIDATES))
+        data = self._ask(messages, candidates_schema(agents, self.CANDIDATES), "clue")
         scored = [self.vet(view, c) for c in data.get("candidates", [])]
         scored = [r for r in scored if r["number"] > 0]
         self.log[-1]["vetted"] = scored
         if not scored:
             self.log.append({"fallback": "clue"})
             return self.fallback.give_clue(view)
-        best = max(scored, key=lambda r: (r["number"], r["margin"]))
+        return self.choose(view, scored)
+
+    def choose(self, view: dict, safe: list[dict]) -> tuple[str, int]:
+        best = max(safe, key=lambda r: (r["number"], r["margin"]))
         return best["clue"], best["number"]
 
     def vet(self, view: dict, candidate: dict) -> dict:
@@ -301,6 +320,67 @@ class HybridPlayer(LLMPlayer):
                 result.update(number=k, margin=margin, kept=[view["words"][i] for i in targets[:k]])
                 break
         return result
+
+
+class SimulatingPlayer(HybridPlayer):
+    """Hybrid, plus a rehearsal: before giving a clue, ask the model how its partner would read it.
+
+    After the GloVe check, the best few candidates are each put to the model *as the guesser*,
+    using exactly the guessing prompt (no key shown), in parallel. Walking down its simulated
+    guesses in order: each of my agents counts; the first word that isn't one ends the run,
+    and if that word is an assassin the clue is thrown out. The clue's number becomes the
+    length of that run, so it promises only what the rehearsal actually found. Highest count
+    wins; ties go to the wider GloVe margin. If every rehearsal misfires, keep the plain
+    hybrid choice.
+
+    This is "theory of mind" done the cheap way: the model can't see inside its partner, but
+    it can play its partner and see what happens.
+    """
+
+    name = "qwen-sim"
+    REHEARSALS = 4
+
+    # GloVe now only guards against assassins: the rehearsal decides how many targets the clue
+    # really reaches, which GloVe judged badly for the model's knowledge-based links.
+    def __init__(self, seed: int | None = None, *, bystander_margin: float = -2.0, **kwargs):
+        super().__init__(seed, bystander_margin=bystander_margin, **kwargs)
+
+    def choose(self, view: dict, safe: list[dict]) -> tuple[str, int]:
+        from concurrent.futures import ThreadPoolExecutor
+
+        from .glove import open_cards
+
+        shortlist = sorted(safe, key=lambda r: (r["number"], r["margin"]), reverse=True)[:self.REHEARSALS]
+        cards = open_cards(view, view["side"])
+        open_words = [view["words"][i] for i in cards]
+        index = {w: i for i, w in enumerate(view["words"])}
+        key = view["my_key"]
+
+        def rehearse(r: dict) -> dict:
+            number = len(r["targets"])
+            data = self._ask(guess_messages(view, r["clue"], number, open_words, own_key=False),
+                             guess_schema(open_words, number),
+                             "rehearsal")
+            run, outcome = 0, "ok"
+            for w in data.get("guesses", []):
+                i = index.get(str(w).upper())
+                if i is None:
+                    continue
+                if key[i] == game.GREEN:
+                    run += 1
+                    continue
+                outcome = "assassin" if key[i] == game.ASSASSIN else "bystander"
+                break
+            return {**r, "simulated": data.get("guesses", []), "run": 0 if outcome == "assassin" else run,
+                    "stopped_on": outcome}
+
+        with ThreadPoolExecutor(len(shortlist)) as pool:
+            rehearsed = list(pool.map(rehearse, shortlist))
+        self.log.append({"rehearsed": rehearsed})
+        best = max(rehearsed, key=lambda r: (r["run"], r["margin"]))
+        if best["run"] == 0:
+            return super().choose(view, safe)
+        return best["clue"], best["run"]
 
 
 def candidates_schema(agents: list[str], n: int) -> dict:

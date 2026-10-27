@@ -62,9 +62,15 @@ class BoardCache:
             v = self.v
             board_vecs = v.matrix[v.ids(list(board))]
             self.sims = v.matrix[v.clue_ids] @ board_vecs.T  # (candidates, 25)
-            # Clues can't be, contain, or be contained in a board word.
+            # Clues can't be, contain, or be contained in a board word, or be a spelling variant of one
+            # (game.spelling_variant, done here with set lookups because there are 20,000 candidates).
+            words = set(board)
+            shortened = {b[:i] + b[i + 1:] for b in board if len(b) >= 6 for i in range(len(b))}
             self.legal = np.array([
-                not any(c in b or b in c for b in board) for c in (v.words[i] for i in v.clue_ids)
+                not (any(c in b or b in c for b in board)
+                     or (len(c) >= 5 and c in shortened)
+                     or (len(c) >= 6 and any(c[:i] + c[i + 1:] in words for i in range(len(c)))))
+                for c in (v.words[i] for i in v.clue_ids)
             ])
             self._board = board
         return self.sims, self.legal

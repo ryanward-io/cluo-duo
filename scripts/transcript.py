@@ -26,6 +26,12 @@ def show_llm_calls(entries: list[dict]) -> None:
                 print(f"    proposed {str(c.get('clue', '')).upper():<14} for {', '.join(c.get('targets', []))}")
             for r in entry["vetted"]:
                 print(f"      GloVe keeps {r['clue']} {r['number']} ({', '.join(r['kept'])}), margin {r['margin']:.2f}")
+        elif "rehearsed" in entry:
+            for r in entry["rehearsed"]:
+                verdict = f"run of {r['run']}" + (f", then a {r['stopped_on']}" if r["stopped_on"] != "ok" else "")
+                print(f"      rehearsal {r['clue']}: partner would pick {', '.join(r['simulated'])} -> {verdict}")
+        elif entry.get("kind") == "rehearsal":
+            continue  # shown via the "rehearsed" summary
         elif "targets" in data:
             print(f"    targets {', '.join(data['targets'])}: {data.get('reason', '')}")
         elif "guesses" in data:
@@ -63,7 +69,7 @@ def main() -> None:
             print(f"Turn {turn}: {side} gives {h['word']} {h['number']}")
             show_llm_calls(take_clue(logs[side]))
         elif h["type"] == "guess":
-            if first_guess and logs[side] and "guesses" in logs[side][0].get("parsed", {}):
+            if first_guess and logs[side] and logs[side][0].get("kind") == "guess":
                 show_llm_calls([logs[side].pop(0)])
             first_guess = False
             print(f"  {side} guesses {h['word']}: {dict(G='agent', N='bystander', A='ASSASSIN')[h['outcome']]}")
@@ -75,10 +81,12 @@ def main() -> None:
 def take_clue(log: list[dict]) -> list[dict]:
     """Remove and return the entries for one clue from the front of a player's log."""
     taken = []
-    while log and "guesses" not in log[0].get("parsed", {}):
+    while log and log[0].get("kind") != "guess":
         entry = log.pop(0)
         taken.append(entry)
-        if "fallback" in entry or ("problem" not in entry and not (log and "fallback" in log[0])):
+        follows = log[0] if log else {}
+        if "fallback" in entry or ("problem" not in entry and "fallback" not in follows
+                                   and follows.get("kind") != "rehearsal" and "rehearsed" not in follows):
             break
     return taken
 

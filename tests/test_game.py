@@ -219,3 +219,39 @@ def test_hybrid_vets_candidates_with_glove():
     else:
         assert p.log[-1] == {"fallback": "clue"}  # nothing safe: GloVe v2 gives the clue
     assert len(calls) == 1
+
+
+def test_simulating_player_trusts_the_rehearsal():
+    from cluoduo.glove import GloveRankPlayer
+    from cluoduo.llm import SimulatingPlayer
+
+    v = game.view(game.new_game(seed=2, first_clue="b"), "b")
+    words, key = v["words"], v["my_key"]
+    agents = [w for w, k in zip(words, key) if k == "G"]
+    assassin = next(w for w, k in zip(words, key) if k == "A")
+    p = SimulatingPlayer(backend=lambda *a, **k: {"content": "{}"}, fallback=GloveRankPlayer(0))
+    safe = [
+        {"clue": "ALPHA", "targets": agents[:3], "number": 3, "margin": 0.5},  # rehearsal hits an assassin second
+        {"clue": "BETA", "targets": agents[3:5], "number": 2, "margin": 0.1},  # rehearsal finds both
+    ]
+    bystander = next(w for w, k in zip(words, key) if k == "N")
+    # ALPHA: one agent, then the assassin. BETA: two agents, then a bystander (ends the run safely).
+    replies = {"ALPHA": [agents[0], assassin], "BETA": [agents[3], agents[4], bystander]}
+
+    def chat(messages, **kwargs):
+        clue = next(c for c in replies if f"clue is {c} " in messages[-1]["content"])
+        return {"content": json.dumps({"reason": "", "guesses": replies[clue]})}
+
+    p.backend = chat
+    assert p.choose(v, safe) == ("BETA", 2)
+    rehearsed = {r["clue"]: r for r in p.log[-1]["rehearsed"]}
+    assert rehearsed["ALPHA"]["run"] == 0 and rehearsed["ALPHA"]["stopped_on"] == "assassin"
+    assert rehearsed["BETA"]["stopped_on"] == "bystander"
+
+
+def test_spelling_variants_of_board_words_are_not_clues():
+    s = game.new_game(seed=1)
+    s["words"][0] = "HARBOUR"
+    with pytest.raises(game.RuleError, match="spelling"):
+        game.check_clue(s, "harbor", 1)
+    assert game.spelling_variant("COLOR", "COLOUR") and not game.spelling_variant("HOUSE", "HORSE")

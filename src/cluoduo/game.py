@@ -111,6 +111,17 @@ def normalise_clue(word: str) -> str:
     return word.strip().upper()
 
 
+def spelling_variant(a: str, b: str) -> bool:
+    """One inserted or deleted letter apart, for words of 5+ letters: HARBOR/HARBOUR, COLOR/COLOUR.
+
+    Swapped letters are allowed (HOUSE/HORSE are different words).
+    """
+    if min(len(a), len(b)) < 5 or abs(len(a) - len(b)) != 1:
+        return False
+    short, long = sorted((a, b), key=len)
+    return any(long[:i] + long[i + 1:] == short for i in range(len(long)))
+
+
 def check_clue(state: State, word: str, number: int) -> str:
     """Return the cleaned clue word, or raise RuleError explaining what's wrong."""
     clue = normalise_clue(word)
@@ -121,6 +132,8 @@ def check_clue(state: State, word: str, number: int) -> str:
             raise RuleError(f"{clue} is on the board.")
         if clue in board_word or board_word in clue:
             raise RuleError(f"{clue} overlaps with {board_word} on the board.")
+        if spelling_variant(clue, board_word):
+            raise RuleError(f"{clue} is another spelling of {board_word} on the board.")
     if not isinstance(number, int) or not 0 <= number <= MAX_CLUE_NUMBER:
         raise RuleError(f"The number must be between 0 and {MAX_CLUE_NUMBER}.")
     return clue

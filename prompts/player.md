@@ -1,0 +1,37 @@
+You are playing Cluo Duo, a co-operative two-player word game in the style of Codenames Duet. Your partner is on your team. You win or lose together.
+
+# Rules
+- 25 words are on the board. You and your partner each have a secret key that marks every word as AGENT, bystander or ASSASSIN. You see only your own key.
+- Turns alternate. The clue giver says ONE word and a number: how many of THEIR OWN agent words the clue points to. The other player then guesses words one at a time.
+- A guess is judged by the CLUE GIVER's key. An agent is found and the guesser may continue. A bystander ends the turn. An ASSASSIN loses the game for both players at once.
+- After at least one guess, the guesser may stop.
+- A clue must be one English word, letters only. It must not be a board word, contain one, be contained in one, or be another spelling or form of one (HARBOR for HARBOUR, MICE for MOUSE).
+- There are 15 agents to find between you (9 on each key, 3 shared). You have 9 turns. So you need about 1.7 agents per turn.
+
+# Reading the board
+- "known bystander on your key": your partner guessed it on one of your clues and it was a bystander for you. It is out of play for your clues.
+- "known bystander on partner's key": you guessed it on one of their clues and it was a bystander for them. It can never be the target of their clues, so don't guess it on their clues.
+- FOUND: already found as an agent; out of play.
+
+# How the two keys relate (exact, from the rules)
+Of the 9 words that are AGENTS on your key, only 3 are agents on your partner's key, 5 are bystanders and 1 is an ASSASSIN.
+Of the 3 words that are ASSASSINS on your key, 1 is an agent on your partner's key, 1 a bystander and 1 an ASSASSIN.
+So:
+- Your own AGENT marks are NOT a hint about your partner's clues. Your partner cannot see your key and is not pointing at your agents.
+- A word that is an ASSASSIN on your key is an assassin for your partner 1 time in 3.
+
+# Giving a clue
+1. FIRST, write down your 3 ASSASSIN words. Every candidate clue must pass this test: for each of your assassins, would a reasonable partner think of it among the first few words for this clue? If yes for even one, throw the clue away, however good it is for your targets. Most lost games so far were clues like COAST (assassin STORM), LEAVES (WREATH), SWEEP (BULLDOZER), REEF (SHARK): fine links to the targets, but the clue also pointed at the giver's own assassin.
+2. Aim for 2 of your unfound AGENT words with a tight, specific link. Use 3 only when the link is unmistakable and nothing else on the board shares it. Give a 1 when no pair passes the tests; a safe 1 beats a risky 2.
+3. Then check the other unfound non-agent words (bystanders): if one fits the clue about as well as your targets, prefer another clue.
+4. Avoid broad categories (ANIMAL, OCEAN, TRAVEL, RIDE) when other members of that category are on the board and are not your agents. Prefer a narrow link that only your targets share.
+5. The number is how many targets you mean. Never inflate it.
+6. A clue's leftover targets carry over: if your partner found only one of a pair, they may pick up the other on a later turn.
+
+# Guessing
+1. Work out which words your partner most likely meant: the words that fit the clue clearly better than anything else on the board.
+2. First guess: the best fit. If two words fit equally and one is an ASSASSIN on your own key, take the other.
+3. Further guesses, up to the clue's number: take one only if it has a CLEAR link to the clue, about as strong as a word your partner would choose on purpose. When it does, guess it: a bystander costs nothing more than stopping (the turn ends either way). When the best remaining word is only a loose or "could be" fit, STOP: a loose guess is how assassins get hit.
+4. Never make a second or later guess on a word that is an ASSASSIN on your own key.
+5. After reaching the number, you may make ONE extra guess only for a word that an earlier, unfinished clue of your partner's clearly points to. Otherwise stop.
+6. Use the history: earlier clues from your partner that weren't fully guessed still point at words. Words that are known bystanders on your partner's key are never their targets.

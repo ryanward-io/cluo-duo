@@ -86,6 +86,20 @@ class BoardCache:
         return mask
 
 
+def unfinished_clues(view: dict) -> list[str]:
+    """Earlier clues from the current clue's giver that found fewer agents than their number."""
+    giver, current = view["clue"]["giver"], len([h for h in view["history"] if h["type"] == "clue"])
+    out, clue, found, n = [], None, 0, 0
+    for h in view["history"]:
+        if h["type"] == "clue":
+            if clue and clue["side"] == giver and found < clue["number"]:
+                out.append(clue["word"])
+            clue, found, n = h, 0, n + 1
+        elif h["type"] == "guess" and h["outcome"] == game.GREEN:
+            found += 1
+    return out  # the current clue (the last one) is never included
+
+
 def used_clues(view: dict) -> set[str]:
     """Every clue word given so far this game, by either player."""
     return {h["word"] for h in view["history"] if h["type"] == "clue"}
@@ -222,9 +236,10 @@ class GloveBayesPlayer(GloveSumPlayer):
 
     # Tuned on boards 0-99. On boards 20000-20999 it beat v1 23.7% to 22.1% (paired McNemar p = 0.026; scripts/compare.py).
     def __init__(self, seed: int | None = None, *, mu: float = 0.2, tau: float = 0.03,
-                 assassin_cost: float = 1.0, **kwargs):
+                 assassin_cost: float = 1.0, leftover_min: float = 1.0, **kwargs):
         super().__init__(seed, **kwargs)
         self.mu, self.tau, self.assassin_cost = mu, tau, assassin_cost
+        self.leftover_min = leftover_min  # 1.0 = never use earlier clues (see leftover_guess)
 
     def posterior(self, view: dict) -> dict[int, dict[str, float]]:
         clue = view["clue"]
@@ -243,7 +258,7 @@ class GloveBayesPlayer(GloveSumPlayer):
     def next_guess(self, view: dict) -> int | None:
         clue = view["clue"]
         if clue["guesses"] >= max(clue["number"], 1):
-            return None
+            return self.leftover_guess(view) if clue["guesses"] == max(clue["number"], 1) else None
         post = self.posterior(view)
         if not post:
             return None
@@ -251,6 +266,26 @@ class GloveBayesPlayer(GloveSumPlayer):
         best = max(value, key=value.get)
         if clue["guesses"] > 0 and value[best] < 0:
             return None  # the next guess is more likely to hurt than help
+        return best
+
+    def leftover_guess(self, view: dict) -> int | None:
+        """One extra guess, after using up the current clue, for a word an earlier clue left behind.
+
+        An earlier clue from the same partner that found fewer agents than its number (it hit a
+        bystander, or the guesser stopped) still points at words. Score every card under each
+        such clue with the same posterior as a normal guess, and take the best only if it is
+        clearly an agent (P(agent) at least `leftover_min`).
+        """
+        if self.leftover_min >= 1:
+            return None
+        best, best_p = None, self.leftover_min
+        for word in unfinished_clues(view):
+            if word not in self.v.index:
+                continue
+            post = self.posterior(dict(view, clue=dict(view["clue"], word=word)))
+            for i, p in post.items():
+                if p["G"] - self.assassin_cost * p["A"] > 0 and p["G"] >= best_p:
+                    best, best_p = i, p["G"]
         return best
 
 
@@ -297,9 +332,14 @@ class GloveRankPlayer(GloveBayesPlayer):
     # Tuned on boards 0-99 against a *noisy* guesser (guess_noise 0.05 and 0.1), because with
     # identical vectors on both sides almost any setting wins (the "private language" problem).
     def __init__(self, seed: int | None = None, *, bystander_margin: float = 0.05,
-                 assassin_margin: float = 0.1, link_threshold: float = 0.3, **kwargs):
+                 assassin_margin: float = 0.1, link_threshold: float = 0.3,
+                 stretch_slack: float = 0.0, stretch_assassin_margin: float = 0.2, **kwargs):
         super().__init__(seed, link_threshold=link_threshold, **kwargs)
         self.bystander_margin, self.assassin_margin = bystander_margin, assassin_margin
+        # Stretch clues (Ryan's idea): when every assassin is far from the clue (by
+        # stretch_assassin_margin), the weakest target may trail the closest bystander by up to
+        # stretch_slack. The worst case is then a bystander, which only ends the turn.
+        self.stretch_slack, self.stretch_assassin_margin = stretch_slack, stretch_assassin_margin
 
     def give_clue(self, view: dict) -> tuple[str, int]:
         sims, legal = self.cache.get(view["words"])
@@ -319,6 +359,11 @@ class GloveRankPlayer(GloveBayesPlayer):
             kth = ranked[:, k - 1]
             margin = np.minimum(kth - worst_bystander - self.bystander_margin,
                                 kth - worst_assassin - self.assassin_margin)
+            if self.stretch_slack:
+                far_from_assassins = kth - worst_assassin >= self.stretch_assassin_margin
+                stretch = np.minimum(kth - worst_bystander - self.bystander_margin + self.stretch_slack,
+                                     kth - worst_assassin - self.assassin_margin)
+                margin = np.where(far_from_assassins, np.maximum(margin, stretch), margin)
             ok = legal & (kth >= self.link_threshold) & (margin >= 0)
             if ok.any():
                 margins = np.where(ok, margin, -np.inf)

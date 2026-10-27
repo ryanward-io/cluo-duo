@@ -31,7 +31,8 @@ So:
 4. Then check the other unfound non-agent words (bystanders): if one fits the clue about as well as your targets, prefer another clue.
 5. Avoid broad categories (ANIMAL, OCEAN, TRAVEL, RIDE) and vague qualities (CLEAN, WOOD, OLD) when other words on the board also fit them. Prefer a narrow link that only your targets share. Lost games: WOOD 3 led to WHEEL, CLEAN 2 to RIVER.
 6. The number is how many targets you mean. Never inflate it.
-7. A clue's leftover targets carry over: if your partner found only one of a pair, they may pick up the other on a later turn.
+7. A clue's leftover targets carry over: if your partner hit a bystander before finding all your targets, they will try the rest as an extra guess on a later turn. So don't spend a new clue on a leftover alone: give a fresh pair and let the leftover ride along.
+8. STRETCH when it's safe. If none of your 3 assassins is anywhere near the topic, you may add one looser target to a strong group: a miss on it is almost always a bystander, which only ends the turn. Example: three clear animals plus BEAK, with assassins RAINBOW, SKYSCRAPER and BOULDER: give ANIMAL 4. Never stretch when an assassin is even loosely related to the topic.
 
 FINAL CHECK, for every clue, just before you give it:
 a. Look at the unfound words on the board and list the first 4 words you would guess for this clue if you were your partner, in order.
@@ -43,11 +44,11 @@ e. If no pair passes, a safe 1 on your hardest-to-link agent is better than a ri
 # Guessing
 1. Work out which words your partner most likely meant: the words that fit the clue clearly better than anything else on the board.
 2. First guess: the best fit. If two words fit equally and one is an ASSASSIN on your own key, take the other.
-   If the clue unmistakably points at one word that is an ASSASSIN on your own key, you may still guess it first: your partner checks clues against THEIR assassins, so a word their clue clearly points at is very likely their agent. Only do this when that word is clearly the intended one, not one of several fits.
+   Your own ASSASSINS follow one rule everywhere (first guess, later guesses, extra guesses, sudden death): guess one ONLY when your partner's clue unmistakably points at that exact word. Your partner checks every clue against THEIR assassins, so a word their clue clearly points at is very likely their agent (in our games this has never failed). Never guess your own assassin as a loose fit, a fallback or "one of several".
 3. A wrong guess ends the turn at once, so order matters: guess the target you are surest of first.
    Further guesses, up to the clue's number: take one only if it has a CLEAR link to the clue, about as strong as a word your partner would choose on purpose. When it does, guess it: a bystander costs nothing more than stopping (the turn ends either way). When the best remaining word is only a loose or "could be" fit, STOP: a loose guess is how assassins get hit.
-4. Never make a second or later guess on a word that is an ASSASSIN on your own key. Example: BAKER 2 seems to mean APRON and DOUGHNUT, and DOUGHNUT is an assassin on your key. If DOUGHNUT is the clearer fit, guess it first and then APRON; if APRON is the clearer fit, guess APRON and stop.
-5. After reaching the number, you may make ONE extra guess only for a word that an earlier, unfinished clue of your partner's clearly points to. Otherwise stop.
+4. Example: BAKER 2 seems to mean APRON and DOUGHNUT, and DOUGHNUT is an assassin on your key. If both clearly fit, guess both (the clearer first). If DOUGHNUT is only a maybe, guess APRON and stop.
+5. LEFTOVERS. When a turn ended on a bystander (or a stop) before all of a clue's targets were found, those targets are still there. Keep a running list of them. On your next guessing turn, after the current clue's guesses, make ONE extra guess on the clearest leftover. This is the cheapest agent in the game: it costs no clue. If no leftover is clear, stop (with the stop command).
 6. Use the history: earlier clues from your partner that weren't fully guessed still point at words. Words that are known bystanders on your partner's key are never their targets.
 
 # Sudden death (only in games that use it)

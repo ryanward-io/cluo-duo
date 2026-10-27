@@ -28,12 +28,20 @@ def main() -> None:
     p.add_argument("--games", type=int, default=500)
     p.add_argument("--first-seed", type=int, default=20000)
     p.add_argument("--noise", type=float, default=0.0, help="guess_noise for GloVe players: a guesser that doesn't share the clue-giver's exact associations")
+    p.add_argument("--second-set", action="append", default=[], metavar="PARAM=VALUE",
+                   help="settings for the second player only, e.g. to compare a player with a variant of itself")
     args = p.parse_args()
+    extra = {k: float(v) for k, v in (item.split("=", 1) for item in args.second_set)}
 
-    def make(name, seed):
-        return PLAYERS[name](seed=seed, guess_noise=args.noise) if name.startswith("glove") else PLAYERS[name](seed=seed)
+    def make(name, seed, settings):
+        if name.startswith("glove"):
+            return PLAYERS[name](seed=seed, guess_noise=args.noise, **settings)
+        return PLAYERS[name](seed=seed)
 
-    players = {name: (make(name, 1), make(name, 2)) for name in (args.first, args.second)}
+    second = args.second + "".join(f" {k}={v}" for k, v in extra.items())
+    players = {args.first: (make(args.first, 1, {}), make(args.first, 2, {})),
+               second: (make(args.second, 1, extra), make(args.second, 2, extra))}
+    args.second = second
     wins = {name: 0 for name in players}
     assassins = {name: 0 for name in players}
     only = {name: 0 for name in players}
@@ -48,7 +56,7 @@ def main() -> None:
             only[won[0]] += 1
 
     for name in players:
-        print(f"{name:<14} wins {wins[name] / args.games:6.1%}   assassin losses {assassins[name] / args.games:6.1%}"
+        print(f"{name:<34} wins {wins[name] / args.games:6.1%}   assassin losses {assassins[name] / args.games:6.1%}"
               f"   boards only it won: {only[name]}")
     print(f"exact McNemar p = {mcnemar_exact(only[args.first], only[args.second]):.3f} over {args.games} shared boards")
 

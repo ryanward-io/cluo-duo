@@ -36,21 +36,19 @@ So:
 
 FINAL CHECK, for every clue, just before you give it:
 a. Look at the unfound words on the board and list the first 4 words you would guess for this clue if you were your partner, in order.
-b. Name your 3 ASSASSINS and, for each one, answer yes or no: "Is it in that list?" If ANY answer is yes, reject the clue. (Lost games: CLUB pointed at TURKEY, TAIL at SQUIRREL, GOLD at TROPHY, STEEL at WHEEL, MUSEUM at MASK, EXPEDITION at FLASHLIGHT. Each was the giver's own assassin.)
+b. If ANY of your 3 ASSASSINS is in that list, reject the clue. (Lost games: CLUB pointed at TURKEY, TAIL at SQUIRREL, GOLD at TROPHY, STEEL at WHEEL, MUSEUM at MASK. Each was the giver's own assassin.)
 c. Your targets must be the top of the list: both of them first, for a 2. In past games two-thirds of 2-clues landed only one word, because the second target was not obviously second.
 d. If the check fails, try another pair before falling back to a 1.
 e. If no pair passes, a safe 1 on your hardest-to-link agent is better than a risky 2: the easy agents can still be paired later.
 
 # Guessing
-Before EVERY guess, ask: "Is this word an ASSASSIN on my key?" If yes, guess it only if it is unmistakably THE word the clue means. If it is one of several fits, guess another word or stop. (Lost game: EXPEDITION 2 fitted COMPASS, SNORKEL and FLASHLIGHT about equally; the player took FLASHLIGHT, its own assassin, and lost.)
-
 1. Work out which words your partner most likely meant: the words that fit the clue clearly better than anything else on the board.
 2. First guess: the best fit. If two words fit equally and one is an ASSASSIN on your own key, take the other.
    Your own ASSASSINS follow one rule everywhere (first guess, later guesses, extra guesses, sudden death): guess one ONLY when your partner's clue unmistakably points at that exact word. Your partner checks every clue against THEIR assassins, so a word their clue clearly points at is very likely their agent (in our games this has never failed). Never guess your own assassin as a loose fit, a fallback or "one of several".
 3. A wrong guess ends the turn at once, so order matters: guess the target you are surest of first.
    Further guesses, up to the clue's number: take one only if it has a CLEAR link to the clue, about as strong as a word your partner would choose on purpose. When it does, guess it: a bystander costs nothing more than stopping (the turn ends either way). When the best remaining word is only a loose or "could be" fit, STOP: a loose guess is how assassins get hit.
 4. Example: BAKER 2 seems to mean APRON and DOUGHNUT, and DOUGHNUT is an assassin on your key. If both clearly fit, guess both (the clearer first). If DOUGHNUT is only a maybe, guess APRON and stop.
-5. LEFTOVERS. Only your PARTNER's clues leave leftovers for you. When one of their clues ended on a bystander (or a stop) before all its targets were found, those targets are still there: keep a running list. On your next guessing turn, after the current clue's guesses, you may make ONE extra guess on a leftover, but only if a word is CLEARLY what that earlier clue meant. No clear leftover: stop (with the stop command). Never guess a word because of a clue YOU gave: your own clues' leftovers are for your partner to find, and your guesses are judged by your partner's key. (Lost game: a player guessed KAYAK for its own COAST clue; it was the partner's assassin.)
+5. LEFTOVERS. When a turn ended on a bystander (or a stop) before all of a clue's targets were found, those targets are still there. Keep a running list of them. On your next guessing turn, after the current clue's guesses, make ONE extra guess on the clearest leftover. This is the cheapest agent in the game: it costs no clue. If no leftover is clear, stop (with the stop command).
 6. Use the history: earlier clues from your partner that weren't fully guessed still point at words. Words that are known bystanders on your partner's key are never their targets.
 
 # Sudden death (only in games that use it)

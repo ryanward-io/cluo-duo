@@ -227,4 +227,4 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .prose th, .prose td { padding: 4px 10px; border-bottom: 1px solid var(--border); text-align: left; }
 .prose td.num, .prose th.num { text-align: right; }
 .badge.recommended { color: var(--accent); border-color: var(--accent); }
-@media (max-width: 420px) { .tabs { gap: 0; } .tabs [role="tab"] { padding: 8px 9px; font-size: 0.92rem; } }
+@media (max-width: 420px) { .tabs { gap: 0; } .tabs [role="tab"] { padding: 8px 5px; font-size: 0.9rem; } }

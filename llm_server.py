@@ -3,6 +3,7 @@
 Two models, each its own class (so its own GPU type and containers):
 
 - `LLM`: Qwen3-8B (8-bit) on an L4, about $0.80/hour while running.
+- `Qwen27`: Qwen3.6-27B (8-bit, dense) on an L40S, about $2/hour while running.
 - `Qwen36`: Qwen3.6-35B-A3B (8-bit) on an L40S, about $2/hour while running. A "mixture of
   experts": 35B parameters in total but only ~3B are used per token, so it knows far more
   than the 8B model yet generates about as fast. The weights (37.5 GB) need the 48 GB card.
@@ -163,6 +164,34 @@ class Qwen36(Server):
     SAMPLING = {"top_p": 0.8, "top_k": 20, "presence_penalty": 1.5}
 
 
+@app.cls(
+    image=image,
+    gpu="L40S",
+    volumes=VOLUMES,
+    min_containers=0,
+    max_containers=1,
+    scaledown_window=5 * MINUTES,
+    timeout=5 * MINUTES,
+    startup_timeout=30 * MINUTES,
+)
+@modal.concurrent(max_inputs=64)
+class Qwen27(Server):
+    """Qwen3.6-27B: dense, so all 27B parameters work on every word (the 35B model uses ~3B).
+    Slower per word, but much more model per decision. 8-bit weights are 31 GB."""
+
+    MODEL = "Qwen/Qwen3.6-27B-FP8"
+    REVISION = "e89b16ebf1988b3d6befa7de50abc2d76f26eb09"
+    VLLM_ARGS = [
+        "--language-model-only",
+        "--max-model-len", "16384",
+        "--gpu-memory-utilization", "0.90",
+        # Same caps that stopped Qwen36 running out of memory while recording CUDA graphs.
+        "--max-num-seqs", "32",
+        "--max-cudagraph-capture-size", "32",
+    ]
+    SAMPLING = {"top_p": 0.8, "top_k": 20, "presence_penalty": 1.5}
+
+
 @app.local_entrypoint()
 def main(model: str = "LLM") -> None:
     schema = {
@@ -171,7 +200,7 @@ def main(model: str = "LLM") -> None:
         "required": ["clue", "targets"],
     }
     start = time.time()
-    out = {"LLM": LLM, "Qwen36": Qwen36}[model]().chat.remote(
+    out = {"LLM": LLM, "Qwen36": Qwen36, "Qwen27": Qwen27}[model]().chat.remote(
         [{"role": "user", "content": "Give a one-word clue linking PENGUIN, OSTRICH and KITE (the bird). Reply as JSON."}],
         schema=schema,
     )

@@ -63,7 +63,9 @@ REFERENCE = {tier: (range(200, 204), tag) for tier, tag in
 REFERENCE["ref + Smart: Qwen clues, Bayesian guesses"] = (range(200, 208), "smart")
 REFERENCE |= {"ref + Smart, 10 turns": (range(200, 208), "smart-t10"),
               "ref + Basic (capped), 10 turns": (range(200, 204), "glove-rank-t10"),
-              "ref + Smart, full clue numbers": (range(200, 208), "smart-full")}
+              "ref + Smart, full clue numbers": (range(200, 208), "smart-full"),
+              "ref + Smart on Qwen3.6-27B (dense)": (range(200, 208), "smart27"),
+              "ref + Smart 27B, model also guesses": (range(200, 208), "smart27-llmguess")}
 
 
 def round_summary(name: str, seeds: range, tag: str = "") -> str:

@@ -108,6 +108,11 @@ PLAYERS = {
     # Live tiers
     "smart": _llm("smart", "SmartPlayer", server="Qwen36"),
     "smart-full": _llm("smart-full", "SmartPlayer", server="Qwen36", full_numbers=True),
+    # Same Smart design on the dense Qwen3.6-27B (more model per decision)
+    "smart27": _llm("smart27", "SmartPlayer", server="Qwen27"),
+    "smart27-llmguess": _llm("smart27-llmguess", "SmartPlayer", server="Qwen27", llm_guesses=True),
+    "smart27-think": _llm("smart27-think", "SmartPlayer", server="Qwen27", thinking=True),
+    "smart-think": _llm("smart-think", "SmartPlayer", server="Qwen36", thinking=True),
     # Qwen3.6 with the player guide from the subagent rounds (guide_player.py)
     "qwen36-guide": _llm("qwen36-guide", "GuidePlayer", server="Qwen36"),
     "qwen36-guide-think": _llm("qwen36-guide-think", "GuidePlayer", server="Qwen36", thinking=True),

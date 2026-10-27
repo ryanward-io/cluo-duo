@@ -202,8 +202,11 @@ class LLMPlayer:
         plan = []
         for w in data.get("guesses", []):
             i = index.get(str(w).strip().upper())
-            if i is not None and i not in plan:
-                plan.append(i)
+            if i is None or i in plan:
+                continue
+            if view["my_key"][i] == game.ASSASSIN and plan:
+                break  # my own assassin only ever as the first, clearest pick (lesson from the player guide)
+            plan.append(i)
         return plan[:max(clue["number"], 1)]
 
 
@@ -446,9 +449,10 @@ class SmartPlayer(SimulatingPlayer):
 
     name = "smart"
 
-    def __init__(self, seed: int | None = None, *, full_numbers: bool = False, **kwargs):
+    def __init__(self, seed: int | None = None, *, full_numbers: bool = False, llm_guesses: bool = False, **kwargs):
         super().__init__(seed, **kwargs)
         self.rehearsal_sets_number = not full_numbers
+        self.llm_guesses = llm_guesses  # True: the model guesses too (tested on the dense 27B)
 
     def give_clue(self, view: dict) -> tuple[str, int]:
         try:
@@ -458,7 +462,7 @@ class SmartPlayer(SimulatingPlayer):
             return self.fallback.give_clue(view)
 
     def next_guess(self, view: dict) -> int | None:
-        if view["clue"]["word"] in self.fallback.v.index:
+        if view["clue"]["word"] in self.fallback.v.index and not self.llm_guesses:
             return self.fallback.next_guess(view)
         try:  # GloVe can't read this clue (a name like RUDOLPH): the language model guesses
             return LLMPlayer.next_guess(self, view)
@@ -513,9 +517,17 @@ def modal_backend(server: str = "LLM") -> Backend:
     """
     import modal
 
-    llm = modal.Cls.from_name("cluo-duo-llm", server)()
+    handle = {"llm": modal.Cls.from_name("cluo-duo-llm", server)()}
 
     def chat(messages, **kwargs):
-        return llm.chat.remote(messages, **kwargs)
+        # Long evaluation runs can outlive the client's auth token ("Jwt is expired") or hit a
+        # transient error: get a fresh handle and retry a couple of times before giving up.
+        for attempt in range(3):
+            try:
+                return handle["llm"].chat.remote(messages, **kwargs)
+            except (modal.exception.AuthError, modal.exception.InternalFailure, ConnectionError):
+                if attempt == 2:
+                    raise
+                handle["llm"] = modal.Cls.from_name("cluo-duo-llm", server)()
 
     return chat

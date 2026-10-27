@@ -88,7 +88,8 @@ def create_app(store: Store, allow_local: bool = False) -> FastAPI:
 
     @app.post("/api/games/{game_id}/guess")
     def guess(game_id: str, body: Guess) -> dict:
-        return move(game_id, lambda s: game.guess(s, HUMAN, body.index))
+        return move(game_id, lambda s: (game.sudden_death_guess if s["phase"] == "sudden_death" else game.guess)(
+            s, HUMAN, body.index))
 
     @app.post("/api/games/{game_id}/stop")
     def stop(game_id: str) -> dict:

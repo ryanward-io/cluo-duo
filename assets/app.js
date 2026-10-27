@@ -13,11 +13,21 @@ function skull(cls) {
 }
 const PARTNERS = { random: "Random", "glove-sum": "Primitive", "glove-bayes": "Primitive + Bayesian", "glove-rank": "Basic",
   "llm-glove": "Clever", llm: "Smart" };
+// Bystander marks: a pawn for your key, an upside-down pawn for your partner's.
+const PAWN = '<svg class="pawn" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="4" r="2.7" fill="currentColor"/><path fill="currentColor" d="M5.4 7.4h5.2l-1 4h1.9l1.2 2.9H3.3l1.2-2.9h1.9z"/></svg>';
+function pawn(cls) {
+  const i = el("i", { class: `mark ${cls}` });
+  i.innerHTML = PAWN;
+  return i;
+}
+const GUESS_PACE_MS = 1000; // the partner's guesses are revealed one at a time, this far apart
+const LOW_TURNS = 3; // warn when this few turns are left
 const OUTCOME = { G: "agent", N: "bystander", A: "assassin" };
 const RESULT = {
   won: "You found all 15 agents. You win!",
   assassin: "An assassin was hit. Game over.",
   out_of_turns: "Out of turns before all agents were found. Game over.",
+  sudden_death: "A wrong guess in sudden death. Game over.",
 };
 
 let state = null;
@@ -64,18 +74,62 @@ async function act(path, body, thinking = "Your partner is thinking…") {
   const slow = setTimeout(() => renderAction(`${thinking} (the server may be waking up; this can take a few seconds)`), 3000);
   const before = state;
   const gen = generation;
+  let next = null;
   try {
-    const next = await call(path, body);
-    if (gen !== generation) return; // the player quit while we were waiting
-    state = next;
-    save(state.phase === "over" ? null : state.id);
+    next = await call(path, body);
   } catch (err) {
     $("#error").textContent = err.message;
   } finally {
     clearTimeout(slow);
-    busy = false;
   }
-  render(before !== state ? before : null);
+  if (gen !== generation) return; // the player quit while we were waiting
+  if (next) {
+    save(next.phase === "over" ? null : next.id);
+    await replayPartner(before, next, gen);
+    if (gen !== generation) return;
+    state = next;
+  }
+  busy = false;
+  render(next && before !== state ? before : null);
+}
+
+// The server answers with every move the partner made at once. Show its guesses one at a time
+// so the player can follow them: rebuild the board as it was after each guess.
+async function replayPartner(before, next, gen) {
+  const start = before ? before.history.length : 0;
+  const steps = next.history.map((h, n) => n).filter((n) => n >= start && next.history[n].type === "guess" && next.history[n].side === "b");
+  if (!before || !steps.length) return;
+  let shown = before;
+  for (const n of steps) {
+    await new Promise((r) => setTimeout(r, GUESS_PACE_MS));
+    if (gen !== generation) return;
+    const frame = upTo(next, n);
+    state = frame;
+    render(shown);
+    renderAction("Your partner is guessing…");
+    shown = frame;
+  }
+  await new Promise((r) => setTimeout(r, GUESS_PACE_MS));
+}
+
+// `next` as it looked just after history entry `n`: later guesses undone, later entries hidden.
+function upTo(next, n) {
+  const s = structuredClone(next);
+  let giver = null;
+  for (let k = 0; k < next.history.length; k++) {
+    const h = next.history[k];
+    if (h.type === "clue") giver = h.side;
+    if (k <= n || h.type !== "guess") continue;
+    const judge = h.sudden_death ? (h.side === "a" ? "b" : "a") : giver;
+    if (h.outcome === "G") s.found[h.index] = false;
+    if (h.outcome === "N") s.bystanders[judge] = s.bystanders[judge].filter((i) => i !== h.index);
+  }
+  s.history = next.history.slice(0, n + 1);
+  s.found_count = s.found.filter(Boolean).length;
+  s.phase = "replay";
+  s.result = null;
+  s.partner_key = null;
+  return s;
 }
 
 // ---------- rendering ----------
@@ -85,7 +139,12 @@ function render(before = null) {
   $("#game").hidden = !state;
   if (!state) return;
   $("#found").textContent = `Agents found: ${state.found_count} / ${state.total_agents}`;
-  $("#turns").textContent = `Turns left: ${state.turns_left}`;
+  const turns = $("#turns");
+  const sudden = state.phase === "sudden_death" || (state.phase === "over" && state.history.some((h) => h.type === "sudden_death"));
+  turns.textContent = sudden ? "Sudden death" : `Turns left: ${state.turns_left}`;
+  const low = sudden || (state.phase !== "over" && state.turns_left <= LOW_TURNS);
+  if (low && !turns.classList.contains("low")) turns.classList.add("pulse");
+  turns.classList.toggle("low", low);
   $("#partner-name").textContent = `Partner: ${PARTNERS[state.partner] || state.partner}`;
   renderBoard(before);
   renderLog();
@@ -98,7 +157,8 @@ function cardInfo(i) {
   const theirs = s.bystanders.b.includes(i);
   const myKey = s.my_key[i];
   const partnerKey = s.partner_key?.[i];
-  const guessable = s.phase === "guess" && s.clue?.giver === "b" && !s.found[i] && !theirs && !busy;
+  const myTurnToGuess = (s.phase === "guess" && s.clue?.giver === "b") || (s.phase === "sudden_death" && s.guesser === "a");
+  const guessable = myTurnToGuess && !s.found[i] && !theirs && !busy;
   const dead = !s.found[i] && ((mine && theirs) || (theirs && myKey !== "G"));
   const hitAssassin = s.result === "assassin" && s.history.at(-2)?.index === i;
   return { mine, theirs, myKey, partnerKey, guessable, dead, hitAssassin };
@@ -121,7 +181,7 @@ function renderBoard(before) {
       c.myKey === "G" && el("i", { class: "dot agent" }), c.myKey === "A" && skull("mine"),
       c.partnerKey === "G" && el("i", { class: "dot agent partner" }), c.partnerKey === "A" && skull("partner"));
     const marks = el("span", { class: "marks", "aria-hidden": "true" },
-      c.mine && el("i", { class: "mark mine" }, "✕"), c.theirs && el("i", { class: "mark theirs" }, "✕"));
+      c.mine && pawn("mine"), c.theirs && pawn("theirs"));
     return el("button", {
       class: cls, type: "button", "aria-label": label, disabled: !c.guessable,
       onclick: () => act(`/api/games/${state.id}/guess`, { index: i }),
@@ -151,6 +211,7 @@ function renderLog() {
     if (h.type === "clue") return el("li", {}, `${who(h.side)} gave the clue `, el("strong", {}, `${h.word} ${h.number}`));
     if (h.type === "guess") return el("li", {}, `${who(h.side)} guessed ${h.word}: `, el("span", { class: `outcome-${h.outcome}` }, OUTCOME[h.outcome]));
     if (h.type === "stop") return el("li", {}, `${who(h.side)} stopped guessing.`);
+    if (h.type === "sudden_death") return el("li", {}, el("strong", {}, "Out of turns: sudden death. No more clues."));
     return el("li", {}, el("strong", {}, RESULT[h.result]));
   });
   $("#log").replaceChildren(...items);
@@ -195,6 +256,13 @@ function renderAction(message) {
       el("div", {}, stopBtn));
     return;
   }
+  if (s.phase === "sudden_death" && s.guesser === "a") {
+    box.replaceChildren(
+      el("p", { class: "big-clue" }, "Sudden death"),
+      el("p", {}, "No more clues. Click a word you think is one of your partner's agents. Earlier clues still help."),
+      el("p", { class: "muted" }, "A right guess finds it; any wrong guess loses the game."));
+    return;
+  }
   box.replaceChildren(el("p", {}, "Waiting for your partner…"));
 }
 
@@ -215,6 +283,8 @@ function quitToMenu() {
 }
 
 $("#quit").addEventListener("click", quitToMenu);
+
+for (const i of document.querySelectorAll("[data-pawn]")) i.innerHTML = PAWN;
 
 // Each explainer's text lives once in the page (for screen readers); copy it into its tooltips.
 for (const term of document.querySelectorAll(".term")) {

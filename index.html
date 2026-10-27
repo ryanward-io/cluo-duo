@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cluo Duo</title>
   <meta name="description" content="Free online Codenames Duet alternative: a two-player co-operative word game you play with an AI partner.">
-  <link rel="stylesheet" href="assets/app.css?v=202610271043">
-  <script src="assets/app.js?v=202610271043" type="module"></script>
+  <link rel="stylesheet" href="assets/app.css?v=202610271422">
+  <script src="assets/app.js?v=202610271422" type="module"></script>
 </head>
 <body>
   <header class="site">
@@ -68,30 +68,33 @@
           <li>Take turns giving a <strong>one-word clue and a number</strong> that point to agents on your own key. Your partner guesses words one at a time.</li>
           <li>When you guess, your partner's key decides: an agent and you can keep going; a bystander ends the turn; an assassin loses the game.</li>
           <li>Clues can't be a word on the board or contain one (or be contained in one).</li>
-          <li>Find all 15 agents within 9 turns to win.</li>
+          <li>Find all 15 agents within 9 turns to win. If the turns run out, it's <strong>sudden death</strong>: no more clues, you take turns guessing your partner's agents, and any wrong guess loses.</li>
         </ul>
       </details>
     </section>
 
     <section id="game" hidden>
-      <div class="scoreboard" aria-live="polite">
-        <span id="found"></span>
-        <span id="turns"></span>
+      <div class="topbar">
         <span id="partner-name" class="muted"></span>
         <button id="quit" type="button" class="link-button" title="Leave this game and choose a new partner"><span aria-hidden="true">←</span> Menu</button>
       </div>
 
       <div id="board" class="board" role="group" aria-label="Word grid"></div>
 
-      <div class="legend muted">
-        <span><i class="dot agent"></i> your agent</span>
-        <span><i class="assassin-icon"><svg class="skull" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M8 1C4.1 1 1.5 3.6 1.5 7c0 2 .9 3.4 2.3 4.2V13a1 1 0 0 0 1 1h.9v-1.5h1V14h2.6v-1.5h1V14h.9a1 1 0 0 0 1-1v-1.8c1.4-.8 2.3-2.2 2.3-4.2C14.5 3.6 11.9 1 8 1zM5.3 9.6a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2zm5.4 0a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2zM8 11.2l-.9-1.6h1.8z"/></svg></i> your assassin</span>
-        <span><i class="mark mine">✕</i> bystander on your key</span>
-        <span><i class="mark theirs">✕</i> bystander on partner's key</span>
+      <div class="scoreboard" aria-live="polite">
+        <span id="found"></span>
+        <span id="turns"></span>
       </div>
 
       <div id="action" class="panel action" aria-live="polite"></div>
       <div id="error" class="error" role="alert"></div>
+
+      <div class="legend muted">
+        <span><i class="dot agent"></i> your agent</span>
+        <span><i class="assassin-icon"><svg class="skull" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M8 1C4.1 1 1.5 3.6 1.5 7c0 2 .9 3.4 2.3 4.2V13a1 1 0 0 0 1 1h.9v-1.5h1V14h2.6v-1.5h1V14h.9a1 1 0 0 0 1-1v-1.8c1.4-.8 2.3-2.2 2.3-4.2C14.5 3.6 11.9 1 8 1zM5.3 9.6a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2zm5.4 0a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2zM8 11.2l-.9-1.6h1.8z"/></svg></i> your assassin</span>
+        <span><i class="mark mine" data-pawn></i> bystander on your key</span>
+        <span><i class="mark theirs" data-pawn></i> bystander on partner's key</span>
+      </div>
 
       <details class="log" open>
         <summary>Game log</summary>

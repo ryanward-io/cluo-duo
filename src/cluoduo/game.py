@@ -12,6 +12,11 @@ time. Guesses are judged by the clue giver's key:
 The team wins by finding all 15 distinct agents within 9 turns. A side with no agents
 left to find stops giving clues, so its partner gives the rest.
 
+Sudden death (official Duet rule): if the turns run out with agents still hidden, there
+are no more clues. Players take turns guessing words they think are their partner's
+agents, judged by the partner's key; any bystander or assassin loses. Games saved before
+this rule existed don't have "sudden_death" set and simply end when the turns run out.
+
 The state is a plain JSON-compatible dict so it can be stored anywhere and replayed.
 """
 
@@ -58,7 +63,8 @@ def other(side: Side) -> Side:
     return "b" if side == "a" else "a"
 
 
-def new_game(seed: int | None = None, first_clue: Side = "a", game_id: str | None = None) -> State:
+def new_game(seed: int | None = None, first_clue: Side = "a", game_id: str | None = None,
+             sudden_death: bool = True) -> State:
     seed = secrets.randbelow(2**31) if seed is None else seed
     rng = random.Random(seed)
     words = rng.sample(WORDS, BOARD_SIZE)
@@ -73,10 +79,12 @@ def new_game(seed: int | None = None, first_clue: Side = "a", game_id: str | Non
         "bystanders": {"a": [], "b": []},  # indices marked as bystanders on that side's key
         "turns_left": TURNS,
         "giver": first_clue,
-        "phase": "clue",  # clue -> guess -> clue ... -> over
+        "phase": "clue",  # clue -> guess -> clue ... -> (sudden_death) -> over
         "clue": None,  # {"word", "number", "giver", "guesses"} while guessing
+        "sudden_death": sudden_death,
+        "guesser": None,  # whose guess it is during sudden death
         "history": [],  # every clue and guess, for the UI, replays and evaluation
-        "result": None,  # "won" | "assassin" | "out_of_turns"
+        "result": None,  # "won" | "assassin" | "out_of_turns" | "sudden_death" (a bystander in sudden death)
     }
 
 
@@ -95,10 +103,16 @@ def found_count(state: State) -> int:
     return sum(state["found"])
 
 
+def judge(state: State) -> Side:
+    """Whose key decides the current guess: the clue giver's, or in sudden death the guesser's partner's."""
+    if state["phase"] == "sudden_death":
+        return other(state["guesser"])
+    return state["clue"]["giver"]
+
+
 def can_guess(state: State, index: int) -> bool:
-    """A word can be guessed if it isn't found and the clue giver hasn't already marked it a bystander."""
-    giver = state["clue"]["giver"]
-    return not state["found"][index] and index not in state["bystanders"][giver]
+    """A word can be guessed if it isn't found and isn't already known to be a bystander on the judging key."""
+    return not state["found"][index] and index not in state["bystanders"][judge(state)]
 
 
 def guessable(state: State) -> list[int]:
@@ -179,6 +193,40 @@ def guess(state: State, side: Side, index: int) -> State:
     return s
 
 
+def sudden_death_guess(state: State, side: Side, index: int) -> State:
+    """A guess with no clue: right finds the agent, anything else loses."""
+    if state["phase"] != "sudden_death":
+        raise RuleError("It isn't sudden death.")
+    if side != state["guesser"]:
+        raise RuleError("It's your partner's guess.")
+    if not 0 <= index < BOARD_SIZE or not can_guess(state, index):
+        raise RuleError("That word can't be guessed now.")
+    s = deepcopy(state)
+    owner = other(side)
+    outcome = s["key"][owner][index]
+    s["history"].append({"type": "guess", "side": side, "index": index, "word": s["words"][index], "outcome": outcome,
+                         "sudden_death": True})
+    if outcome == ASSASSIN:
+        return _finish(s, "assassin")
+    if outcome == BYSTANDER:
+        s["bystanders"][owner].append(index)
+        return _finish(s, "sudden_death")
+    s["found"][index] = True
+    if found_count(s) == total_agents(s):
+        return _finish(s, "won")
+    s["guesser"] = _next_guesser(s, side)
+    return s
+
+
+def _next_guesser(s: State, last: Side | None) -> Side:
+    """Alternate between the players, skipping one whose partner has no agents left to find."""
+    first = other(last) if last else other(s["giver"])
+    for side in (first, other(first)):
+        if agents_left(s, other(side)):
+            return side
+    raise AssertionError("no agents left but the game isn't won")
+
+
 def stop(state: State, side: Side) -> State:
     if state["phase"] != "guess" or side != other(state["clue"]["giver"]):
         raise RuleError("You can't stop guessing now.")
@@ -193,7 +241,12 @@ def _end_turn(s: State) -> State:
     s["turns_left"] -= 1
     s["clue"] = None
     if s["turns_left"] <= 0:
-        return _finish(s, "out_of_turns")
+        if not s.get("sudden_death"):
+            return _finish(s, "out_of_turns")
+        s["phase"] = "sudden_death"
+        s["guesser"] = _next_guesser(s, None)
+        s["history"].append({"type": "sudden_death"})
+        return s
     nxt = other(s["giver"])
     s["giver"] = nxt if agents_left(s, nxt) else s["giver"]
     s["phase"] = "clue"
@@ -204,6 +257,7 @@ def _finish(s: State, result: str) -> State:
     s["phase"] = "over"
     s["result"] = result
     s["clue"] = None
+    s["guesser"] = None
     s["history"].append({"type": "end", "result": result})
     return s
 
@@ -219,4 +273,5 @@ def view(state: State, side: Side) -> dict[str, Any]:
     v["found_count"] = found_count(state)
     v["total_agents"] = total_agents(state)
     v["partner_key"] = list(state["key"][other(side)]) if state["phase"] == "over" else None
+    v["guesser"] = state.get("guesser")
     return v

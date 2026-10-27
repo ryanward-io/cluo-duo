@@ -75,7 +75,27 @@ def test_view_hides_partner_key_until_over():
 def test_self_play_always_finishes():
     results = Counter(self_play(RandomPlayer(i), RandomPlayer(i + 1000), seed=i)["result"] for i in range(200))
     assert sum(results.values()) == 200
-    assert set(results) <= {"won", "assassin", "out_of_turns"}
+    assert set(results) <= {"won", "assassin", "sudden_death"}  # out_of_turns now leads to sudden death
+    old_rules = Counter(self_play(RandomPlayer(i), RandomPlayer(i + 1000), seed=i, sudden_death=False)["result"]
+                        for i in range(50))
+    assert set(old_rules) <= {"won", "assassin", "out_of_turns"}
+
+
+def test_sudden_death():
+    s = game.new_game(seed=3, first_clue="a")
+    s["turns_left"] = 1
+    s = game.give_clue(s, "a", "ZZZ", 1)
+    bystander = next(i for i, k in enumerate(s["key"]["a"]) if k == "N")
+    s = game.guess(s, "b", bystander)  # ends the last turn
+    assert s["phase"] == "sudden_death" and s["guesser"] == "b"  # the side that was guessing goes on
+    with pytest.raises(game.RuleError):
+        game.give_clue(s, "a", "ZZZ", 1)
+    agent = next(i for i, k in enumerate(s["key"]["a"]) if k == "G")  # judged by the guesser's partner's key
+    s = game.sudden_death_guess(s, "b", agent)
+    assert s["found"][agent] and s["guesser"] == "a"  # turns alternate
+    wrong = next(i for i, k in enumerate(s["key"]["b"]) if k == "N" and not s["found"][i])
+    s = game.sudden_death_guess(s, "a", wrong)
+    assert s["phase"] == "over" and s["result"] == "sudden_death"
 
 
 def test_api_flow_hides_ai_key():
@@ -255,3 +275,38 @@ def test_spelling_variants_of_board_words_are_not_clues():
     with pytest.raises(game.RuleError, match="spelling"):
         game.check_clue(s, "harbor", 1)
     assert game.spelling_variant("COLOR", "COLOUR") and not game.spelling_variant("HOUSE", "HORSE")
+
+
+def test_api_sudden_death_guess():
+    store = MemoryStore()
+    client = TestClient(create_app(store))
+    v = client.post("/api/games", json={"first": "human", "seed": 5, "partner": "glove-rank"}).json()
+    state = store.get(v["id"])
+    state.update(phase="sudden_death", guesser="a", turns_left=0, clue=None, giver="a")
+    store.put(state)
+    agent = next(i for i, k in enumerate(state["key"]["b"]) if k == "G" and not state["found"][i])
+    r = client.post(f"/api/games/{v['id']}/guess", json={"index": agent}).json()
+    assert r["found"][agent] and r["phase"] in ("sudden_death", "over")
+
+
+def test_ai_clue_vocabulary_has_no_blocked_words():
+    from cluoduo.blocked import is_blocked
+    from cluoduo.glove import load_vectors
+
+    v = load_vectors()
+    assert not [v.words[i] for i in v.clue_ids if is_blocked(v.words[i])]
+    assert is_blocked("kinky") and is_blocked("WOKE") and not is_blocked("BUTTER") and not is_blocked("GRAPE")
+
+
+def test_glove_partners_never_repeat_a_clue():
+    from cluoduo.glove import GloveRankPlayer, GloveSumPlayer
+
+    for player in (GloveRankPlayer(0), GloveSumPlayer(0)):
+        s = game.new_game(seed=8, first_clue="b")
+        clues = []
+        for _ in range(4):  # the guesser never finds anything, so the same clue would stay "best"
+            word, number = player.give_clue(game.view(s, "b"))
+            clues.append(word)
+            s = game.give_clue(s, "b", word, number)
+            s["phase"], s["clue"] = "clue", None  # skip the guessing: side b gives the next clue too
+        assert len(set(clues)) == len(clues), clues

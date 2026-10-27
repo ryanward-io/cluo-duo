@@ -24,6 +24,7 @@ from pathlib import Path
 import numpy as np
 
 from . import game
+from .blocked import is_blocked
 
 DEFAULT_VECTORS = Path(__file__).resolve().parents[2] / "data" / "glove50k.npz"
 CLUE_VOCAB = 20_000  # candidate clues: the most frequent real words in the vectors file
@@ -45,7 +46,7 @@ def load_vectors(path: str | None = None) -> Vectors:
     path = path or os.environ.get("CLUODUO_VECTORS") or str(DEFAULT_VECTORS)
     data = np.load(path)
     words = [str(w) for w in data["words"]]
-    clue_ids = np.array([i for i, w in enumerate(words[:CLUE_VOCAB]) if len(w) >= 3])
+    clue_ids = np.array([i for i, w in enumerate(words[:CLUE_VOCAB]) if len(w) >= 3 and not is_blocked(w)])
     return Vectors(words, {w: i for i, w in enumerate(words)}, data["vectors"].astype(np.float32), clue_ids)
 
 
@@ -73,7 +74,21 @@ class BoardCache:
                 for c in (v.words[i] for i in v.clue_ids)
             ])
             self._board = board
+            self.position = {v.words[i]: n for n, i in enumerate(v.clue_ids)}
         return self.sims, self.legal
+
+    def used(self, view: dict) -> np.ndarray:
+        """Mask of candidate clues already given this game."""
+        mask = np.zeros(len(self.v.clue_ids), dtype=bool)
+        for word in used_clues(view):
+            if word in self.position:
+                mask[self.position[word]] = True
+        return mask
+
+
+def used_clues(view: dict) -> set[str]:
+    """Every clue word given so far this game, by either player."""
+    return {h["word"] for h in view["history"] if h["type"] == "clue"}
 
 
 def open_cards(view: dict, giver: str) -> list[int]:
@@ -103,6 +118,7 @@ class GloveSumPlayer:
 
     def give_clue(self, view: dict) -> tuple[str, int]:
         sims, legal = self.cache.get(view["words"])
+        legal = legal & ~self.cache.used(view)  # never repeat a clue already given this game
         me = view["side"]
         cards = open_cards(view, me)
         key = view["my_key"]
@@ -139,6 +155,9 @@ class GloveSumPlayer:
             rng = np.random.default_rng(zlib.crc32(tag))
             sims = sims + self.guess_noise * rng.standard_normal(game.BOARD_SIZE)[cards]
         return sims
+
+    def sudden_death_guess(self, view: dict) -> int:
+        return sudden_death_guess(self, view)
 
     def next_guess(self, view: dict) -> int | None:
         clue = view["clue"]
@@ -235,6 +254,30 @@ class GloveBayesPlayer(GloveSumPlayer):
         return best
 
 
+# ---------- sudden death ----------
+
+def sudden_death_guess(player, view: dict) -> int:
+    """No clue to go on: pick the word most likely to be one of my partner's agents.
+
+    For each card, the Bayesian posterior (see GloveBayesPlayer) under each of my partner's
+    earlier clues, keeping the best; with no usable clue, the prior from my own key alone.
+    Any wrong guess loses now, so only P(agent) matters.
+    """
+    partner = game.other(view["side"])
+    mu, tau = getattr(player, "mu", 0.2), getattr(player, "tau", 0.03)
+    words = [h["word"] for h in view["history"] if h["type"] == "clue" and h["side"] == partner]
+    best: dict[int, float] = {}
+    for word in words or [None]:
+        v = dict(view, clue={"word": word, "number": 1, "giver": partner, "guesses": 0})
+        prior = key_prior(v)
+        sims = dict(zip(prior, player.clue_similarities(v, list(prior)))) if word in player.v.index else {}
+        for i, p in prior.items():
+            ratio = np.exp((sims[i] - mu) / tau) if i in sims else 1.0
+            g = p["G"] * ratio / (p["G"] * ratio + p["N"] + p["A"])
+            best[i] = max(best.get(i, 0.0), g)
+    return max(best, key=best.get)
+
+
 # ---------- v2 clues: rankings instead of sums ----------
 
 class GloveRankPlayer(GloveBayesPlayer):
@@ -260,6 +303,7 @@ class GloveRankPlayer(GloveBayesPlayer):
 
     def give_clue(self, view: dict) -> tuple[str, int]:
         sims, legal = self.cache.get(view["words"])
+        legal = legal & ~self.cache.used(view)  # never repeat a clue already given this game
         key = view["my_key"]
         cards = open_cards(view, view["side"])
         agents = [i for i in cards if key[i] == game.GREEN]

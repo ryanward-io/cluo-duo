@@ -16,6 +16,8 @@
   --theirs: #6b4fa0;
   --error: #b42318;
   --dead: #e4e2dc;
+  --warn: #b54708;
+  --warn-bg: rgba(181, 71, 8, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -36,13 +38,15 @@
     --theirs: #b59cf0;
     --error: #ff8a80;
     --dead: #24262a;
+    --warn: #f5a524;
+    --warn-bg: rgba(245, 165, 36, 0.15);
   }
 }
 :root[data-theme="dark"] {
   --bg: #141619; --surface: #1c1f23; --text: #e8eaed; --muted: #a5abb2; --border: #353a40;
   --accent: #6fb1ff; --accent-text: #0d1116; --card: #2a2620; --card-text: #f1ead9;
   --agent: #4caf63; --agent-text: #0d1a10; --assassin: #f1f1f1; --mine: #e59a52;
-  --theirs: #b59cf0; --error: #ff8a80; --dead: #24262a;
+  --theirs: #b59cf0; --error: #ff8a80; --dead: #24262a; --warn: #f5a524; --warn-bg: rgba(245, 165, 36, 0.15);
 }
 
 * { box-sizing: border-box; }
@@ -79,9 +83,13 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .rules summary, .log summary { cursor: pointer; color: var(--accent); }
 .rules li { margin: 4px 0; }
 
-.scoreboard { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0 0 10px; font-weight: 600; }
-.scoreboard { align-items: center; }
-.scoreboard .muted { font-weight: 400; }
+.topbar { display: flex; align-items: center; gap: 8px 20px; margin: 0 0 10px; }
+.scoreboard { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; margin: 12px 0 10px; font-weight: 600; }
+#turns { padding: 2px 10px; border-radius: 999px; border: 1px solid transparent; }
+#turns.low { color: var(--warn); border-color: var(--warn); background: var(--warn-bg); }
+#turns.pulse { animation: pulse 1.2s ease-out 2; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 5px var(--warn-bg); } }
+@media (prefers-reduced-motion: reduce) { #turns.pulse { animation: none; } }
 .link-button {
   margin-left: auto; padding: 4px 6px; border: 0; background: none; color: var(--muted);
   font-size: 0.9rem; font-weight: 500; text-decoration: none; border-radius: 6px;
@@ -111,7 +119,11 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .dot.agent { background: var(--agent); border: 1px solid var(--agent-text); }
 .dot.assassin { background: var(--assassin); border: 1px solid var(--bg); }
 .dot.partner { outline: 2px dashed var(--muted); outline-offset: 1px; }
-.marks { position: absolute; top: 2px; right: 6px; font-size: 0.8rem; }
+.marks { position: absolute; top: 3px; right: 4px; display: flex; gap: 1px; }
+.mark { display: inline-flex; width: 18px; height: 18px; line-height: 0; }
+.mark .pawn { width: 100%; height: 100%; filter: drop-shadow(0 0 1px var(--card)); }
+.mark.theirs .pawn { transform: rotate(180deg); }
+.legend .mark { width: 16px; height: 16px; vertical-align: -3px; }
 .mark.mine { color: var(--mine); }
 .mark.theirs { color: var(--theirs); }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.85rem; margin: 8px 0 14px; }

@@ -22,6 +22,8 @@ from functools import lru_cache
 from typing import Any, Callable
 
 from . import game
+from .blocked import is_blocked
+from .glove import used_clues
 
 MAX_ATTEMPTS = 3
 MAX_TARGETS = 3  # bigger clues were nearly always reckless
@@ -167,11 +169,18 @@ class LLMPlayer:
             return str(e)
         if not is_real_word(data["clue"]):
             return f"{data['clue'].upper()} isn't a common English word."
+        if is_blocked(data["clue"]):
+            return f"{data['clue'].upper()} isn't suitable for a family-friendly game."
+        if game.normalise_clue(data["clue"]) in used_clues(view):
+            return f"{data['clue'].upper()} has already been given as a clue this game; choose a new one."
         if not any(str(t).upper() in agents for t in data.get("targets", [])):
             return f"None of the targets are your unfound AGENT words ({', '.join(agents)})."
         return None
 
     # ---------- guessing ----------
+
+    def sudden_death_guess(self, view: dict) -> int:
+        return self.fallback.sudden_death_guess(view)  # not prompted yet: the GloVe partner decides
 
     def next_guess(self, view: dict) -> int | None:
         clue = view["clue"]
@@ -299,6 +308,12 @@ class HybridPlayer(LLMPlayer):
             result["problem"] = str(e)
             return result
         v = self.fallback.v  # the GloVe partner's vectors
+        if is_blocked(clue):
+            result["problem"] = "not suitable for a family-friendly game"
+            return result
+        if clue in used_clues(view):
+            result["problem"] = "already given this game"
+            return result
         if clue not in v.index:
             result["problem"] = "not in the GloVe vocabulary"
             return result

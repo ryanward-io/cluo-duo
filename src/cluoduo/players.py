@@ -28,6 +28,8 @@ class Player(Protocol):
 
     def next_guess(self, view: View) -> int | None: ...
 
+    # Optional: def sudden_death_guess(self, view: View) -> int  (a random legal word if missing)
+
 
 class RandomPlayer:
     """Placeholder partner: clues are random words and guesses are random. Useful for testing the plumbing."""
@@ -125,6 +127,15 @@ def play_guesses(state: game.State, side: game.Side, player: Player) -> game.Sta
     return state
 
 
+def play_sudden_death(state: game.State, side: game.Side, player: Player) -> game.State:
+    """One guess with no clue. Players without a strategy for it guess a random legal word."""
+    view = game.view(state, side)
+    choice = player.sudden_death_guess(view) if hasattr(player, "sudden_death_guess") else None
+    if choice is None or not 0 <= choice < game.BOARD_SIZE or not game.can_guess(state, choice):
+        choice = random.Random(state["seed"] + len(state["history"])).choice(game.guessable(state))
+    return game.sudden_death_guess(state, side, choice)
+
+
 def play_partner(state: game.State, side: game.Side, player: Player) -> game.State:
     """Run the AI side until it's the human's move (or the game ends)."""
     while state["phase"] != "over":
@@ -132,18 +143,23 @@ def play_partner(state: game.State, side: game.Side, player: Player) -> game.Sta
             state = play_clue(state, side, player)
         elif state["phase"] == "guess" and state["clue"]["giver"] != side:
             state = play_guesses(state, side, player)
+        elif state["phase"] == "sudden_death" and state["guesser"] == side:
+            state = play_sudden_death(state, side, player)
         else:
             break
     return state
 
 
-def self_play(clue_a: Player, clue_b: Player, seed: int, first: game.Side = "a") -> game.State:
+def self_play(clue_a: Player, clue_b: Player, seed: int, first: game.Side = "a",
+              sudden_death: bool = True) -> game.State:
     """Two AI players on one board, for evaluation. Side a uses clue_a for everything it does, and so on."""
-    state = game.new_game(seed=seed, first_clue=first)
+    state = game.new_game(seed=seed, first_clue=first, sudden_death=sudden_death)
     players = {"a": clue_a, "b": clue_b}
     while state["phase"] != "over":
         if state["phase"] == "clue":
             state = play_clue(state, state["giver"], players[state["giver"]])
+        elif state["phase"] == "sudden_death":
+            state = play_sudden_death(state, state["guesser"], players[state["guesser"]])
         else:
             guesser = game.other(state["clue"]["giver"])
             state = play_guesses(state, guesser, players[guesser])

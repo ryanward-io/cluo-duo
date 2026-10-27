@@ -43,7 +43,7 @@ def partner_moves(state: dict) -> dict:
     """The built-in partner (if any) plays side b until it's side a's move."""
     if state.get("partner", "glove-rank") == "none":
         return state
-    return play_partner(state, "b", PLAYERS["glove-rank"](seed=state["seed"] + len(state["history"])))
+    return play_partner(state, "b", PLAYERS[state.get("partner", "glove-rank")](seed=state["seed"] + len(state["history"])))
 
 
 def my_move(state: dict, side: str) -> bool:
@@ -106,7 +106,8 @@ def main() -> None:
     sub = p.add_subparsers(dest="cmd", required=True)
     n = sub.add_parser("new")
     n.add_argument("--seed", type=int, required=True)
-    n.add_argument("--partner", choices=["glove-rank", "none"], default="glove-rank")
+    n.add_argument("--partner", choices=sorted(PLAYERS) + ["none"], default="glove-rank",
+                   help="the AI on side b (any player in players.PLAYERS), or none for two agents")
     n.add_argument("--sudden-death", action="store_true", help="play on in sudden death when the turns run out")
     n.add_argument("--tag", default="", help="suffix for the game id, to replay the same board again (seed12-duo-v9)")
     commands = {name: sub.add_parser(name) for name in ("show", "wait", "stop", "clue", "guess")}

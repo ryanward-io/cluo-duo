@@ -54,10 +54,14 @@ ROUNDS = {
 }
 # Replays: an earlier guide on the same boards as a later one, to tell guide effects from hard boards.
 REPLAYS = {"v9 replayed on v10's boards (Sonnet)": (range(144, 152), "v9")}
+# Reference-partner test: Sonnet + guide v9 on side a, each AI tier on side b, same boards.
+REFERENCE = {tier: (range(200, 204), tag) for tier, tag in
+             [("ref + Random", "random"), ("ref + Primitive", "glove-sum"), ("ref + Basic", "glove-rank"),
+              ("ref + Smart (Qwen)", "qwen36-sim")]}
 
 
 def round_summary(name: str, seeds: range, tag: str = "") -> str:
-    suffix = f"-duo-{tag}" if tag else "-duo"
+    suffix = (f"-duo-{tag}" if tag else "-duo") if not name.startswith("ref") else f"-{tag}"
     states = [json.loads(p.read_text()) for s in seeds if (p := GAMES / f"seed{s}{suffix}.json").exists()]
     done = [s for s in states if s["result"]]
     if not done:
@@ -75,7 +79,7 @@ if __name__ == "__main__":
     if sys.argv[1:] == ["--rounds"]:
         for name, seeds in ROUNDS.items():
             print(round_summary(name, seeds))
-        for name, (seeds, tag) in REPLAYS.items():
+        for name, (seeds, tag) in (REPLAYS | REFERENCE).items():
             print(round_summary(name, seeds, tag))
         sys.exit()
     pattern = sys.argv[1] if len(sys.argv) > 1 else "*"

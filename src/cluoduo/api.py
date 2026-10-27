@@ -41,6 +41,11 @@ class Warm(BaseModel):
 class Clue(BaseModel):
     word: str = Field(min_length=1, max_length=40)
     number: int = Field(ge=0, le=game.MAX_CLUE_NUMBER)
+    anyway: bool = False  # the player confirmed a clue their partner doesn't know
+
+
+# Partners that read clues only through GloVe, so a word outside its vocabulary is a blind guess.
+GLOVE_GUESSERS = {"glove-sum", "glove-bayes", "glove-rank", "glove-rank-safe"}
 
 
 class Guess(BaseModel):
@@ -119,6 +124,13 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None) -> FastAPI
 
     @app.post("/api/games/{game_id}/clue")
     def clue(game_id: str, body: Clue) -> dict:
+        state = load(game_id)
+        if not body.anyway and state.get("partner") in GLOVE_GUESSERS:
+            from .glove import load_vectors
+
+            word = game.normalise_clue(body.word)
+            if word not in load_vectors().index:
+                raise HTTPException(409, {"unknown_word": word})
         return move(game_id, lambda s: game.give_clue(s, HUMAN, body.word, body.number))
 
     @app.post("/api/games/{game_id}/guess")

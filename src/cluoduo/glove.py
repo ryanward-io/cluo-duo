@@ -261,6 +261,8 @@ class GloveBayesPlayer(GloveSumPlayer):
         clue = view["clue"]
         if clue["guesses"] >= max(clue["number"], 1):
             return self.leftover_guess(view) if clue["guesses"] == max(clue["number"], 1) else None
+        if clue["word"] not in self.v.index and clue["guesses"] > 0:
+            return None  # a clue it can't read (RUDOLPH isn't in the vocabulary): one forced guess, then stop
         post = self.posterior(view)
         if not post:
             return None

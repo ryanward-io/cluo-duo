@@ -431,7 +431,8 @@ class SmartPlayer(SimulatingPlayer):
     With a Claude partner, Qwen's clues (proposed, rehearsed, vetted by GloVe) were good, but
     every game was lost on Qwen's loose second guesses. Basic's Bayesian guesser held up
     better on the same partner's clues and stops when the assassin risk gets too high, so
-    guessing goes to it. If the GPU or model call fails, GloVe covers the clue too.
+    guessing goes to it, except for clues GloVe doesn't know (names like RUDOLPH), which Qwen
+    reads. If the GPU or model call fails, GloVe covers the move.
     """
 
     name = "smart"
@@ -444,7 +445,13 @@ class SmartPlayer(SimulatingPlayer):
             return self.fallback.give_clue(view)
 
     def next_guess(self, view: dict) -> int | None:
-        return self.fallback.next_guess(view)
+        if view["clue"]["word"] in self.fallback.v.index:
+            return self.fallback.next_guess(view)
+        try:  # GloVe can't read this clue (a name like RUDOLPH): the language model guesses
+            return LLMPlayer.next_guess(self, view)
+        except Exception as e:
+            self.log.append({"fallback": "guess", "error": repr(e)})
+            return self.fallback.next_guess(view)
 
 
 def warm_up(server: str = "Qwen36") -> None:

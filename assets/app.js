@@ -126,6 +126,7 @@ async function call(path, body) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (data.detail?.unknown_word) throw Object.assign(new Error("unknown word"), { unknownWord: data.detail.unknown_word });
     const detail = Array.isArray(data.detail) ? data.detail.map((d) => d.msg).join("; ") : data.detail;
     throw new Error(detail || `Server error (${res.status})`);
   }
@@ -147,6 +148,16 @@ async function act(path, body, thinking = "Your partner is thinking…") {
   try {
     next = await call(path, body);
   } catch (err) {
+    if (err.unknownWord && path.endsWith("/clue")) {
+      const name = PARTNERS[state.partner] || "Your partner";
+      clearTimeout(slow);
+      busy = false;
+      if (confirm(`${name} doesn't know the word ${err.unknownWord}, so it would have to guess blind. Give it anyway?`)) {
+        return act(path, { ...body, anyway: true }, thinking);
+      }
+      render();
+      return;
+    }
     $("#error").textContent = err.message;
   } finally {
     clearTimeout(slow);

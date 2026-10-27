@@ -373,3 +373,24 @@ def test_smart_partner_daily_cap_and_warm_up(monkeypatch):
     assert client.post("/api/games", json={"first": "human", "partner": "smart"}).status_code == 200
     assert client.post("/api/games", json={"first": "human", "partner": "smart"}).status_code == 429
     assert client.post("/api/warm", json={"partner": "glove-rank"}).json() == {"ok": False}
+
+
+def test_glove_guesser_stops_after_one_blind_guess_on_unknown_clue():
+    from cluoduo.glove import GloveRankPlayer
+
+    s = game.give_clue(game.new_game(seed=4, first_clue="a"), "a", "RUDOLPH", 2)  # not in the vocabulary
+    p = GloveRankPlayer(0)
+    first = p.next_guess(game.view(s, "b"))
+    assert first is not None  # the rules require one guess
+    s2 = game.guess(s, "b", first)
+    if s2["phase"] == "guess":
+        assert p.next_guess(game.view(s2, "b")) is None
+
+
+def test_api_warns_about_clues_a_glove_partner_cannot_read():
+    client = TestClient(create_app(MemoryStore()))
+    g = client.post("/api/games", json={"first": "human", "partner": "glove-rank", "seed": 3}).json()
+    r = client.post(f"/api/games/{g['id']}/clue", json={"word": "rudolph", "number": 2})
+    assert r.status_code == 409 and r.json()["detail"] == {"unknown_word": "RUDOLPH"}
+    r = client.post(f"/api/games/{g['id']}/clue", json={"word": "rudolph", "number": 2, "anyway": True})
+    assert r.status_code == 200

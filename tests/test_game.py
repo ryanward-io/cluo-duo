@@ -360,3 +360,16 @@ def test_forms_of_compound_parts_are_not_clues():
         with pytest.raises(game.RuleError, match="form of"):
             game.check_clue(s, clue, 1)
     assert game.check_clue(s, "letters", 1) == "LETTERS"
+
+
+def test_smart_partner_daily_cap_and_warm_up(monkeypatch):
+    from cluoduo import api
+
+    monkeypatch.setattr(api, "GPU_GAMES_PER_DAY", 1)
+    monkeypatch.setitem(api.PLAYERS, "smart", lambda seed=None: RandomPlayer(seed))  # no GPU in tests
+    warmed = []
+    client = TestClient(create_app(MemoryStore(), warm_up=warmed.append))
+    assert client.post("/api/warm", json={"partner": "smart"}).json() == {"ok": True} and warmed == ["Qwen36"]
+    assert client.post("/api/games", json={"first": "human", "partner": "smart"}).status_code == 200
+    assert client.post("/api/games", json={"first": "human", "partner": "smart"}).status_code == 429
+    assert client.post("/api/warm", json={"partner": "glove-rank"}).json() == {"ok": False}

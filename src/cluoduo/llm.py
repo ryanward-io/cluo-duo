@@ -425,6 +425,35 @@ class CautiousSimulatingPlayer(SimulatingPlayer):
         return choice
 
 
+class SmartPlayer(SimulatingPlayer):
+    """The live "Smart" partner: Qwen gives the clues, the Bayesian GloVe guesser guesses.
+
+    With a Claude partner, Qwen's clues (proposed, rehearsed, vetted by GloVe) were good, but
+    every game was lost on Qwen's loose second guesses. Basic's Bayesian guesser held up
+    better on the same partner's clues and stops when the assassin risk gets too high, so
+    guessing goes to it. If the GPU or model call fails, GloVe covers the clue too.
+    """
+
+    name = "smart"
+
+    def give_clue(self, view: dict) -> tuple[str, int]:
+        try:
+            return super().give_clue(view)
+        except Exception as e:  # model server down, out of credit, timed out
+            self.log.append({"fallback": "clue", "error": repr(e)})
+            return self.fallback.give_clue(view)
+
+    def next_guess(self, view: dict) -> int | None:
+        return self.fallback.next_guess(view)
+
+
+def warm_up(server: str = "Qwen36") -> None:
+    """Start the model's GPU without waiting for it (a tiny request, fire and forget)."""
+    import modal
+
+    modal.Cls.from_name("cluo-duo-llm", server)().chat.spawn([{"role": "user", "content": "hi"}], max_tokens=1)
+
+
 def candidates_schema(agents: list[str], n: int) -> dict:
     one = {
         "type": "object",

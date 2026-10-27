@@ -58,7 +58,8 @@ REPLAYS = {"v9 replayed on v10's boards (Sonnet)": (range(144, 152), "v9")}
 REFERENCE = {tier: (range(200, 204), tag) for tier, tag in
              [("ref + Random", "random"), ("ref + Primitive", "glove-sum"), ("ref + Basic", "glove-rank"),
               ("ref + Smart (Qwen)", "qwen36-sim"), ("ref + Basic, capped at 3, no leftovers", "glove-rank-safe"),
-              ("ref + Smart, GloVe vets later guesses", "qwen36-sim-cautious")]}
+              ("ref + Smart, GloVe vets later guesses", "qwen36-sim-cautious"),
+              ("ref + Smart: Qwen clues, Bayesian guesses", "smart")]}
 
 
 def round_summary(name: str, seeds: range, tag: str = "") -> str:

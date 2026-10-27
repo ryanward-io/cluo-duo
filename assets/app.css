@@ -228,3 +228,4 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .prose td.num, .prose th.num { text-align: right; }
 .badge.recommended { color: var(--accent); border-color: var(--accent); }
 @media (max-width: 420px) { .tabs { gap: 0; } .tabs [role="tab"] { padding: 8px 5px; font-size: 0.9rem; } }
+.badge.experimental { color: var(--warn); border-color: var(--warn); }

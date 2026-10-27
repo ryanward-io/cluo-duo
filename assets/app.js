@@ -13,7 +13,8 @@ function skull(cls) {
   return i;
 }
 const PARTNERS = { random: "Random", "glove-sum": "Primitive", "glove-bayes": "Primitive + Bayesian", "glove-rank": "Basic",
-  "llm-glove": "Smart", llm: "Advanced" };
+  smart: "Smart", llm: "Advanced" };
+const GPU_PARTNERS = ["smart"]; // run on a GPU that may need a few minutes to wake up
 // Bystander marks: a pawn for your key, an upside-down pawn for your partner's.
 const PAWN = '<svg class="pawn" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="4" r="2.7" fill="currentColor"/><path fill="currentColor" d="M5.4 7.4h5.2l-1 4h1.9l1.2 2.9H3.3l1.2-2.9h1.9z"/></svg>';
 function pawn(cls) {
@@ -136,7 +137,10 @@ async function act(path, body, thinking = "Your partner is thinking…") {
   busy = true;
   $("#error").textContent = "";
   renderAction(thinking);
-  const slow = setTimeout(() => renderAction(`${thinking} (the server may be waking up; this can take a few seconds)`), 3000);
+  const gpu = GPU_PARTNERS.includes(state?.partner ?? document.querySelector('input[name="partner"]:checked').value);
+  const slow = setTimeout(() => renderAction(gpu
+    ? `${thinking} The Smart partner runs on its own GPU, which can take a few minutes to wake up. Thanks for waiting.`
+    : `${thinking} (the server may be waking up; this can take a few seconds)`), 3000);
   const before = state;
   const gen = generation;
   let next = null;
@@ -387,6 +391,13 @@ $(".tabs").addEventListener("keydown", (e) => {
 const tabFromHash = () => (TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "game");
 showTab(tabFromHash());
 window.addEventListener("hashchange", () => showTab(tabFromHash()));
+
+// Selecting a GPU partner starts its GPU booting while the player finishes setting up.
+for (const input of document.querySelectorAll('input[name="partner"]')) {
+  input.addEventListener("change", () => {
+    if (input.checked && GPU_PARTNERS.includes(input.value)) call("/api/warm", { partner: input.value }).catch(() => {});
+  });
+}
 
 $("#tips").checked = tipsOn();
 $("#tips").addEventListener("change", (e) => {

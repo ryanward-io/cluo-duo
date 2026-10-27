@@ -39,7 +39,9 @@ games = modal.Dict.from_name("cluo-duo-games", create_if_missing=True)
     min_containers=0,  # scale to zero when nobody's playing, so idle time costs nothing
     max_containers=2,  # hard ceiling on parallel machines, which also caps the bill
     scaledown_window=120,  # keep a warm container for 2 minutes after the last request
-    timeout=60,  # kill any single request that runs longer than a minute
+    # Kill any single request after 10 minutes. GloVe moves take milliseconds; the Smart partner's
+    # first move can wait several minutes for its GPU to boot.
+    timeout=10 * 60,
 )
 # One container serves many requests at once; game moves are short and mostly waiting.
 @modal.concurrent(max_inputs=20)
@@ -49,4 +51,6 @@ def web():
     from cluoduo.api import create_app
     from cluoduo.store import ModalDictStore
 
-    return create_app(ModalDictStore(games))
+    from cluoduo.llm import warm_up
+
+    return create_app(ModalDictStore(games), warm_up=warm_up)

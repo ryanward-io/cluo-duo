@@ -38,18 +38,21 @@ a. Look at the unfound words on the board and list the first 4 words you would g
 b. If ANY of your 3 ASSASSINS is in that list, reject the clue. (Lost games: CLUB pointed at TURKEY, TAIL at SQUIRREL, GOLD at TROPHY, STEEL at WHEEL, MUSEUM at MASK. Each was the giver's own assassin.)
 c. Your targets must be the top of the list: both of them first, for a 2. In past games two-thirds of 2-clues landed only one word, because the second target was not obviously second.
 d. If the check fails, try another pair before falling back to a 1.
+e. If no pair passes, a safe 1 on your hardest-to-link agent is better than a risky 2: the easy agents can still be paired later.
 
 # Guessing
 1. Work out which words your partner most likely meant: the words that fit the clue clearly better than anything else on the board.
 2. First guess: the best fit. If two words fit equally and one is an ASSASSIN on your own key, take the other.
    If the clue unmistakably points at one word that is an ASSASSIN on your own key, you may still guess it first: your partner checks clues against THEIR assassins, so a word their clue clearly points at is very likely their agent. Only do this when that word is clearly the intended one, not one of several fits.
-3. Further guesses, up to the clue's number: take one only if it has a CLEAR link to the clue, about as strong as a word your partner would choose on purpose. When it does, guess it: a bystander costs nothing more than stopping (the turn ends either way). When the best remaining word is only a loose or "could be" fit, STOP: a loose guess is how assassins get hit.
+3. A wrong guess ends the turn at once, so order matters: guess the target you are surest of first.
+   Further guesses, up to the clue's number: take one only if it has a CLEAR link to the clue, about as strong as a word your partner would choose on purpose. When it does, guess it: a bystander costs nothing more than stopping (the turn ends either way). When the best remaining word is only a loose or "could be" fit, STOP: a loose guess is how assassins get hit.
 4. Never make a second or later guess on a word that is an ASSASSIN on your own key. Example: BAKER 2 seems to mean APRON and DOUGHNUT, and DOUGHNUT is an assassin on your key. If DOUGHNUT is the clearer fit, guess it first and then APRON; if APRON is the clearer fit, guess APRON and stop.
 5. After reaching the number, you may make ONE extra guess only for a word that an earlier, unfinished clue of your partner's clearly points to. Otherwise stop.
 6. Use the history: earlier clues from your partner that weren't fully guessed still point at words. Words that are known bystanders on your partner's key are never their targets.
 
 # Sudden death
 1. Only guess a word that one of your partner's earlier clues clearly points to and that wasn't found. Their unfinished clues are your best evidence.
-2. Never guess a word that is an ASSASSIN on your own key, or a known bystander on their key.
+2. Never guess a known bystander on their key. A word that is an ASSASSIN on your own key follows the same rule as in normal guessing: guess it only if their clues unmistakably point at it (they checked their clues against THEIR assassins, so a clear target is very likely their agent); never guess it as a fallback.
 3. Remember their 9 agents are, on your key, 3 agents, 5 bystanders and 1 assassin: a word that is a bystander on your key is a reasonable guess if a clue points at it.
 4. Take the strongest candidate each time. There is no stopping in sudden death: if you cannot see any good candidate, still choose the one their clues support best.
+5. Go in order of evidence: a word pointed at by two of their clues beats a word pointed at by one; the second target of an unfinished 2-clue beats a loose association.

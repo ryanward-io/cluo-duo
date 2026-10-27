@@ -363,6 +363,31 @@ for (const term of document.querySelectorAll(".term")) {
   term.dataset.tip = document.getElementById(term.getAttribute("aria-describedby")).textContent;
 }
 
+// ---------- tabs (Game, How to play, Why I built it) ----------
+
+const TABS = ["game", "how", "why"];
+function showTab(name, focus = false) {
+  for (const t of TABS) {
+    const btn = $(`#tab-btn-${t}`);
+    btn.setAttribute("aria-selected", String(t === name));
+    btn.tabIndex = t === name ? 0 : -1;
+    $(`#tab-${t}`).hidden = t !== name;
+  }
+  if (focus) $(`#tab-btn-${name}`).focus();
+  if (name === "game" && state) fitWords();
+  history.replaceState(null, "", name === "game" ? location.pathname + location.search : `#${name}`);
+}
+for (const t of TABS) $(`#tab-btn-${t}`).addEventListener("click", () => showTab(t));
+$(".tabs").addEventListener("keydown", (e) => {
+  const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+  if (!step) return;
+  const current = TABS.findIndex((t) => $(`#tab-btn-${t}`).getAttribute("aria-selected") === "true");
+  showTab(TABS[(current + step + TABS.length) % TABS.length], true);
+});
+const tabFromHash = () => (TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "game");
+showTab(tabFromHash());
+window.addEventListener("hashchange", () => showTab(tabFromHash()));
+
 $("#tips").checked = tipsOn();
 $("#tips").addEventListener("change", (e) => {
   try { localStorage.setItem(TIPS_KEY, e.target.checked ? "1" : "0"); } catch (_) { /* storage blocked */ }
@@ -376,7 +401,7 @@ $("#start").addEventListener("click", () => {
   render();
   $("#game").hidden = false;
   const partner = document.querySelector('input[name="partner"]:checked').value;
-  act("/api/games", { first, partner, sudden_death: $("#sudden-death").checked, turns: Number($("#turns").value) },
+  act("/api/games", { first, partner, sudden_death: $("#sudden-death").checked, turns: Number($("#turn-count").value) },
     "Setting up the board…");
 });
 

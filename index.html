@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cluo Duo</title>
   <meta name="description" content="Free online Codenames Duet alternative: a two-player co-operative word game you play with an AI partner.">
-  <link rel="stylesheet" href="assets/app.css?v=202610272226">
-  <script src="assets/app.js?v=202610272226" type="module"></script>
+  <link rel="stylesheet" href="assets/app.css?v=202610272232">
+  <script src="assets/app.js?v=202610272232" type="module"></script>
 </head>
 <body>
   <header class="site">
@@ -17,6 +17,13 @@
     <h1>Cluo Duo</h1>
     <p class="lede">Free online Codenames Duet alternative: a co-operative word game you play with an AI partner.</p>
 
+    <nav class="tabs" role="tablist" aria-label="Cluo Duo">
+      <button type="button" role="tab" id="tab-btn-game" aria-controls="tab-game" aria-selected="true">Game</button>
+      <button type="button" role="tab" id="tab-btn-how" aria-controls="tab-how" aria-selected="false" tabindex="-1">How to play</button>
+      <button type="button" role="tab" id="tab-btn-why" aria-controls="tab-why" aria-selected="false" tabindex="-1">Why I built it</button>
+    </nav>
+
+    <div id="tab-game" role="tabpanel" aria-labelledby="tab-btn-game">
     <section id="setup" class="panel">
       <h2>New game</h2>
       <fieldset class="first-clue">
@@ -42,7 +49,7 @@
           </label>
           <label class="partner-card">
             <input type="radio" name="partner" value="glove-rank" checked>
-            <span class="tier">Basic</span>
+            <span class="tier">Basic <span class="badge recommended">Recommended</span></span>
             <span class="desc">Primitive with some <span class="term" tabindex="0" aria-describedby="bayes-tip">Bayesian</span> game reasoning.</span>
           </label>
           <label class="partner-card soon">
@@ -60,26 +67,19 @@
         <p id="bayes-tip" class="tip" role="tooltip">Bayesian: weighs its guesses using what the board and its own key reveal, and only gives clues when its targets clearly beat danger words.</p>
       </fieldset>
 
-      <label class="check">Turns
-        <select id="turns">
-          <option value="9" selected>9 (standard)</option>
-          <option value="10">10 (easier)</option>
-          <option value="11">11 (easiest)</option>
-        </select>
-      </label>
-      <label class="check"><input type="checkbox" id="sudden-death"> Sudden death <span class="muted">(if the turns run out, keep guessing with no clues; any wrong guess loses)</span></label>
-      <label class="check"><input type="checkbox" id="tips"> Show advanced tips <span class="muted">(odds for your partner's key, and the pace you need)</span></label>
+      <fieldset class="options">
+        <legend>Options</legend>
+        <label class="check">Turns
+          <select id="turn-count">
+            <option value="9" selected>9 (standard)</option>
+            <option value="10">10 (easier)</option>
+            <option value="11">11 (easiest)</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="sudden-death"> Sudden death <span class="muted">Keep guessing without clues when turns run out</span></label>
+        <label class="check"><input type="checkbox" id="tips"> Advanced tips <span class="muted">Show guessing odds and the pace you need</span></label>
+      </fieldset>
       <button id="start" type="button">Start game</button>
-      <details class="rules">
-        <summary>How to play</summary>
-        <ul>
-          <li>You and your partner share 25 words. Each of you has a secret key: 9 of the words are your <strong>agents</strong> (green), 3 are <strong>assassins</strong>, and the rest are bystanders. Your keys overlap but aren't the same, so there are 15 agents to find between you.</li>
-          <li>Take turns giving a <strong>one-word clue and a number</strong> that point to agents on your own key. Your partner guesses words one at a time.</li>
-          <li>When you guess, your partner's key decides: an agent and you can keep going; a bystander ends the turn; an assassin loses the game.</li>
-          <li>Clues can't be a word on the board or contain one (or be contained in one).</li>
-          <li>Find all 15 agents within 9 turns to win (or 10 or 11 on the easier settings). With the optional <strong>sudden death</strong> rule, running out of turns isn't the end: no more clues, you take turns guessing your partner's agents, and any wrong guess loses.</li>
-        </ul>
-      </details>
     </section>
 
     <section id="game" hidden>
@@ -111,6 +111,30 @@
         <ol id="log"></ol>
       </details>
     </section>
+    </div>
+
+    <div id="tab-how" role="tabpanel" aria-labelledby="tab-btn-how" class="panel prose" hidden>
+      <h2>How to play</h2>
+      <ul>
+        <li>You and your partner share 25 words. Each of you has a secret key: 9 of the words are your <strong>agents</strong> (green), 3 are <strong>assassins</strong>, and the rest are bystanders. Your keys overlap but aren't the same, so there are 15 agents to find between you.</li>
+        <li>Take turns giving a <strong>one-word clue and a number</strong> that point to agents on your own key. Your partner guesses words one at a time.</li>
+        <li>When you guess, your partner's key decides: an agent and you can keep going; a bystander ends the turn; an assassin loses the game.</li>
+        <li>Clues can't be a word on the board or contain one (or be contained in one), or be another spelling of one.</li>
+        <li>Find all 15 agents within 9 turns to win (or 10 or 11 on the easier settings). With the optional <strong>sudden death</strong> rule, running out of turns isn't the end: no more clues, you take turns guessing your partner's agents, and any wrong guess loses.</li>
+      </ul>
+      <h3>Tips</h3>
+      <ul>
+        <li>Your own green words are not hints about your partner's clues: only 3 of your 9 agents are theirs too.</li>
+        <li>Each of your assassins is an assassin for your partner one time in three, so be careful guessing them.</li>
+        <li>After a correct guess, a wrong guess that lands on a bystander costs nothing more than stopping. Only assassins are dangerous.</li>
+        <li>A clue that hit a bystander still points at its other words. Come back to them later.</li>
+      </ul>
+    </div>
+
+    <div id="tab-why" role="tabpanel" aria-labelledby="tab-btn-why" class="panel prose" hidden>
+      <h2>Why I built it</h2>
+      <p class="muted">Coming soon: how and why I built Cluo Duo, and what it taught me about putting language models into a real product.</p>
+    </div>
   </main>
 
   <footer class="site">

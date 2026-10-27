@@ -206,3 +206,24 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .tips .hint { margin: 8px 0 0; }
 .card .chance { position: absolute; bottom: 2px; right: 5px; font-size: 0.68rem; font-weight: 600; color: var(--muted); }
 .check select { font: inherit; padding: 4px 8px; }
+
+/* ---------- tabs ---------- */
+.tabs { display: flex; gap: 4px; margin: 0 0 16px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.tabs [role="tab"] {
+  padding: 8px 14px; border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: none;
+  color: var(--muted); font-weight: 600; white-space: nowrap; margin-bottom: -1px;
+}
+.tabs [role="tab"]:hover { color: var(--text); }
+.tabs [role="tab"][aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+#setup fieldset.options { margin-top: 4px; }
+.options .check { font-weight: 600; }
+.options .check .muted { font-weight: 400; font-size: 0.85rem; }
+#start { margin-top: 2px; }
+.prose { line-height: 1.6; }
+.prose h2 { margin-bottom: 8px; }
+.prose h3 { margin: 18px 0 6px; font-size: 1.05rem; }
+.prose li { margin: 6px 0; }
+.prose table { border-collapse: collapse; margin: 8px 0 12px; font-size: 0.92rem; }
+.prose th, .prose td { padding: 4px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+.prose td.num, .prose th.num { text-align: right; }
+.badge.recommended { color: var(--accent); border-color: var(--accent); }

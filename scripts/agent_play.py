@@ -51,6 +51,8 @@ def my_move(state: dict, side: str) -> bool:
         return True
     if state["phase"] == "clue":
         return state["giver"] == side
+    if state["phase"] == "sudden_death":
+        return state["guesser"] == side
     return state["clue"]["giver"] != side
 
 
@@ -77,6 +79,8 @@ def show(state: dict, ME: str) -> None:
             print(f"    {who} guessed {h['word']}: {dict(G='agent', N='bystander', A='ASSASSIN')[h['outcome']]}")
         elif h["type"] == "stop":
             print(f"    {who} stopped")
+        elif h["type"] == "sudden_death":
+            print("  Out of turns: SUDDEN DEATH")
     if not v["history"]:
         print("  (none)")
     print()
@@ -84,6 +88,10 @@ def show(state: dict, ME: str) -> None:
         print(f"GAME OVER: {state['result']}")
     elif not my_move(state, ME):
         print(f"WAITING: it's your partner's move. Run:  wait {state['id']} --side {ME}")
+    elif state["phase"] == "sudden_death":
+        print("SUDDEN DEATH: the turns have run out. No more clues. YOUR MOVE: guess a word you think is one of")
+        print("  your PARTNER's agents (judged by their key). A right guess finds it; any wrong guess loses the game.")
+        print(f"  guess {state['id']} WORD --side {ME}")
     elif state["phase"] == "clue":
         print(f"YOUR MOVE: give a clue for your AGENT words:  clue {state['id']} WORD NUMBER --side {ME}")
     else:
@@ -137,7 +145,8 @@ def main() -> None:
                 index = {w: i for i, w in enumerate(state["words"])}.get(args.word.strip().upper())
                 if index is None:
                     raise game.RuleError(f"{args.word.upper()} is not on the board.")
-                state = game.guess(state, ME, index)
+                move = game.sudden_death_guess if state["phase"] == "sudden_death" else game.guess
+                state = move(state, ME, index)
             elif args.cmd == "stop":
                 state = game.stop(state, ME)
         except game.RuleError as e:

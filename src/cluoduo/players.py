@@ -75,9 +75,10 @@ def _glove_rank(seed=None, **kwargs):
 def _llm(name, cls="LLMPlayer", **fixed):
     """Factory for an LLM partner: which player class, which model server, thinking on or off."""
     def make(seed=None, **kwargs):
-        from . import llm
+        from . import guide_player, llm
 
-        player = getattr(llm, cls)(seed, **fixed, **kwargs)
+        module = guide_player if cls.startswith("Guide") else llm
+        player = getattr(module, cls)(seed, **fixed, **kwargs)
         player.name = name
         return player
 
@@ -96,6 +97,10 @@ PLAYERS = {
     "qwen36-think": _llm("qwen36-think", server="Qwen36", thinking=True),
     "qwen36-hybrid": _llm("qwen36-hybrid", "HybridPlayer", server="Qwen36"),
     "qwen36-sim": _llm("qwen36-sim", "SimulatingPlayer", server="Qwen36"),
+    # Qwen3.6 with the player guide from the subagent rounds (guide_player.py)
+    "qwen36-guide": _llm("qwen36-guide", "GuidePlayer", server="Qwen36"),
+    "qwen36-guide-think": _llm("qwen36-guide-think", "GuidePlayer", server="Qwen36", thinking=True),
+    "qwen36-guide-hybrid": _llm("qwen36-guide-hybrid", "GuideHybridPlayer", server="Qwen36"),
 }
 
 MAX_CLUE_ATTEMPTS = 3

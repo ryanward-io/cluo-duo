@@ -310,3 +310,35 @@ def test_glove_partners_never_repeat_a_clue():
             s = game.give_clue(s, "b", word, number)
             s["phase"], s["clue"] = "clue", None  # skip the guessing: side b gives the next clue too
         assert len(set(clues)) == len(clues), clues
+
+
+def test_guide_player_rejects_clues_its_own_check_flags():
+    from cluoduo.glove import GloveRankPlayer
+    from cluoduo.guide_player import GuidePlayer
+
+    v = game.view(game.new_game(seed=2, first_clue="b"), "b")
+    words, key = v["words"], v["my_key"]
+    agents = [w for w, k in zip(words, key) if k == "G"]
+    assassin = next(w for w, k in zip(words, key) if k == "A")
+    others = [w for w, k in zip(words, key) if k == "N"]
+    chat, calls = _fake_backend([
+        {"targets": agents[:2], "clue": "planet", "partner_would_guess": [agents[0], assassin, agents[1], others[0]]},
+        {"targets": agents[:2], "clue": "music", "partner_would_guess": [agents[0], others[0], others[1], others[2]]},
+    ])
+    p = GuidePlayer(backend=chat, fallback=GloveRankPlayer(0))
+    assert p.give_clue(v) == ("MUSIC", 1)  # only one target made its own rehearsal list
+    assert "ASSASSIN" in calls[1][-1]["content"]
+
+
+def test_guide_player_takes_own_assassin_only_first():
+    from cluoduo.glove import GloveRankPlayer
+    from cluoduo.guide_player import GuidePlayer
+
+    s = game.give_clue(game.new_game(seed=2, first_clue="b"), "b", "ZZZ", 2)
+    v = game.view(s, "a")
+    words, key = v["words"], v["my_key"]
+    mine_a = next(w for w, k in zip(words, key) if k == "A")
+    other = next(w for w, k in zip(words, key) if k == "N")
+    chat, _ = _fake_backend([{"reason": "", "guesses": [other, mine_a]}])
+    p = GuidePlayer(backend=chat, fallback=GloveRankPlayer(0))
+    assert p._plan_guesses(v) == [words.index(other)]  # own assassin dropped as a second guess

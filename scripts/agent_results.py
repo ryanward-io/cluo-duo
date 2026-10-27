@@ -52,10 +52,13 @@ ROUNDS = {
     "v10 (Sonnet)": range(144, 152),
     "v10 (Haiku)": range(152, 160),
 }
+# Replays: an earlier guide on the same boards as a later one, to tell guide effects from hard boards.
+REPLAYS = {"v9 replayed on v10's boards (Sonnet)": (range(144, 152), "v9")}
 
 
-def round_summary(name: str, seeds: range) -> str:
-    states = [json.loads(p.read_text()) for s in seeds if (p := GAMES / f"seed{s}-duo.json").exists()]
+def round_summary(name: str, seeds: range, tag: str = "") -> str:
+    suffix = f"-duo-{tag}" if tag else "-duo"
+    states = [json.loads(p.read_text()) for s in seeds if (p := GAMES / f"seed{s}{suffix}.json").exists()]
     done = [s for s in states if s["result"]]
     if not done:
         return f"{name:<20} no finished games"
@@ -72,6 +75,8 @@ if __name__ == "__main__":
     if sys.argv[1:] == ["--rounds"]:
         for name, seeds in ROUNDS.items():
             print(round_summary(name, seeds))
+        for name, (seeds, tag) in REPLAYS.items():
+            print(round_summary(name, seeds, tag))
         sys.exit()
     pattern = sys.argv[1] if len(sys.argv) > 1 else "*"
     for path in sorted(GAMES.glob(f"{pattern}.json")):

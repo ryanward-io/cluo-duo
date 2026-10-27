@@ -208,7 +208,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .check select { font: inherit; padding: 4px 8px; }
 
 /* ---------- tabs ---------- */
-.tabs { display: flex; gap: 4px; margin: 0 0 16px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 16px; border-bottom: 1px solid var(--border); }
 .tabs [role="tab"] {
   padding: 8px 14px; border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: none;
   color: var(--muted); font-weight: 600; white-space: nowrap; margin-bottom: -1px;

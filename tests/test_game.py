@@ -351,3 +351,12 @@ def test_extra_turns_setting():
     client = TestClient(create_app(MemoryStore()))
     assert client.post("/api/games", json={"first": "human", "turns": 10}).json()["turns_left"] == 10
     assert client.post("/api/games", json={"first": "human", "turns": 17}).status_code == 422
+
+
+def test_forms_of_compound_parts_are_not_clues():
+    s = game.new_game(seed=1)
+    s["words"][0], s["words"][1] = "MAILBOX", "STRAWBERRY"
+    for clue in ("mails", "mailed", "boxes", "berries"):
+        with pytest.raises(game.RuleError, match="form of"):
+            game.check_clue(s, clue, 1)
+    assert game.check_clue(s, "letters", 1) == "LETTERS"

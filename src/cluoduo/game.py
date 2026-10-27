@@ -140,6 +140,17 @@ def spelling_variant(a: str, b: str) -> bool:
     return any(long[:i] + long[i + 1:] == short for i in range(len(long)))
 
 
+ENDINGS = ("IES", "ING", "ERS", "ES", "ED", "ER", "S", "Y")
+
+
+def roots(word: str) -> set[str]:
+    """The word with one common ending removed (MAILS -> MAIL, BOXES -> BOX), at least 3 letters."""
+    out = {word[: -len(e)] for e in ENDINGS if word.endswith(e) and len(word) - len(e) >= 3}
+    if word.endswith("IES") and len(word) > 5:
+        out.add(word[:-3] + "Y")  # BERRIES -> BERRY
+    return out
+
+
 def check_clue(state: State, word: str, number: int) -> str:
     """Return the cleaned clue word, or raise RuleError explaining what's wrong."""
     clue = normalise_clue(word)
@@ -152,6 +163,9 @@ def check_clue(state: State, word: str, number: int) -> str:
             raise RuleError(f"{clue} overlaps with {board_word} on the board.")
         if spelling_variant(clue, board_word):
             raise RuleError(f"{clue} is another spelling of {board_word} on the board.")
+        root = next((r for r in roots(clue) if r in board_word or board_word in r), None)
+        if root:
+            raise RuleError(f"{clue} is a form of {root}, which is part of {board_word} on the board.")
     if not isinstance(number, int) or not 0 <= number <= MAX_CLUE_NUMBER:
         raise RuleError(f"The number must be between 0 and {MAX_CLUE_NUMBER}.")
     return clue

@@ -342,3 +342,12 @@ def test_guide_player_takes_own_assassin_only_first():
     chat, _ = _fake_backend([{"reason": "", "guesses": [other, mine_a]}])
     p = GuidePlayer(backend=chat, fallback=GloveRankPlayer(0))
     assert p._plan_guesses(v) == [words.index(other)]  # own assassin dropped as a second guess
+
+
+def test_extra_turns_setting():
+    assert game.new_game(seed=1, turns=11)["turns_left"] == 11
+    with pytest.raises(game.RuleError):
+        game.new_game(seed=1, turns=12)
+    client = TestClient(create_app(MemoryStore()))
+    assert client.post("/api/games", json={"first": "human", "turns": 10}).json()["turns_left"] == 10
+    assert client.post("/api/games", json={"first": "human", "turns": 17}).status_code == 422

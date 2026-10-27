@@ -376,7 +376,8 @@ $("#start").addEventListener("click", () => {
   render();
   $("#game").hidden = false;
   const partner = document.querySelector('input[name="partner"]:checked').value;
-  act("/api/games", { first, partner, sudden_death: $("#sudden-death").checked }, "Setting up the board…");
+  act("/api/games", { first, partner, sudden_death: $("#sudden-death").checked, turns: Number($("#turns").value) },
+    "Setting up the board…");
 });
 
 (async () => {

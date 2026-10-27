@@ -57,7 +57,8 @@ REPLAYS = {"v9 replayed on v10's boards (Sonnet)": (range(144, 152), "v9")}
 # Reference-partner test: Sonnet + guide v9 on side a, each AI tier on side b, same boards.
 REFERENCE = {tier: (range(200, 204), tag) for tier, tag in
              [("ref + Random", "random"), ("ref + Primitive", "glove-sum"), ("ref + Basic", "glove-rank"),
-              ("ref + Smart (Qwen)", "qwen36-sim")]}
+              ("ref + Smart (Qwen)", "qwen36-sim"), ("ref + Basic, capped at 3, no leftovers", "glove-rank-safe"),
+              ("ref + Smart, GloVe vets later guesses", "qwen36-sim-cautious")]}
 
 
 def round_summary(name: str, seeds: range, tag: str = "") -> str:

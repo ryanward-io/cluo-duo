@@ -59,7 +59,7 @@ def evaluate(name: str, games: int, first_seed: int = 0, workers: int = 1, **kwa
     for s in results:
         ends[s["result"]] += 1
         found.append(game.found_count(s))
-        turns.append(game.TURNS - s["turns_left"])
+        turns.append(s.get("turns", game.TURNS) - s["turns_left"])
         sizes += [h["number"] for h in s["history"] if h["type"] == "clue"]
         hits.append(sum(h["outcome"] == "G" for h in s["history"] if h["type"] == "guess"))
     llm_calls = sum(1 for p in created for entry in getattr(p, "log", []) if "reply" in entry)

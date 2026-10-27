@@ -336,8 +336,11 @@ class GloveRankPlayer(GloveBayesPlayer):
     def __init__(self, seed: int | None = None, *, bystander_margin: float = 0.05,
                  assassin_margin: float = 0.1, link_threshold: float = 0.3,
                  stretch_slack: float = 0.0, stretch_assassin_margin: float = 0.2,
-                 leftover_min: float = 0.7, **kwargs):
+                 leftover_min: float = 0.7, max_number: int = 9, **kwargs):
         super().__init__(seed, link_threshold=link_threshold, leftover_min=leftover_min, **kwargs)
+        # Self-play rewards big numbers (DEER 5) because both sides share the vectors; a human
+        # (or another model) can't follow them. max_number caps the clue size.
+        self.max_number = int(max_number)
         self.bystander_margin, self.assassin_margin = bystander_margin, assassin_margin
         # Stretch clues (Ryan's idea): when every assassin is far from the clue (by
         # stretch_assassin_margin), the weakest target may trail the closest bystander by up to
@@ -359,7 +362,7 @@ class GloveRankPlayer(GloveBayesPlayer):
 
         ranked = -np.sort(-sims[:, agents], axis=1)  # each clue's agent similarities, highest first
         best, best_k, best_margin = None, 0, -np.inf
-        for k in range(len(agents), 0, -1):
+        for k in range(min(len(agents), self.max_number), 0, -1):
             kth = ranked[:, k - 1]
             margin = np.minimum(kth - worst_bystander - self.bystander_margin,
                                 kth - worst_assassin - self.assassin_margin)

@@ -72,6 +72,13 @@ def _glove_rank(seed=None, **kwargs):
     return GloveRankPlayer(seed, **kwargs)
 
 
+def _glove_rank_safe(seed=None, **kwargs):
+    """Basic tuned for a non-GloVe partner: clues of at most 3, no leftover guesses."""
+    from .glove import GloveRankPlayer
+
+    return GloveRankPlayer(seed, **{"max_number": 3, "leftover_min": 1.0, **kwargs})
+
+
 def _llm(name, cls="LLMPlayer", **fixed):
     """Factory for an LLM partner: which player class, which model server, thinking on or off."""
     def make(seed=None, **kwargs):
@@ -86,7 +93,7 @@ def _llm(name, cls="LLMPlayer", **fixed):
 
 
 PLAYERS = {
-    "random": RandomPlayer, "glove-sum": _glove_sum, "glove-bayes": _glove_bayes, "glove-rank": _glove_rank,
+    "random": RandomPlayer, "glove-sum": _glove_sum, "glove-bayes": _glove_bayes, "glove-rank": _glove_rank, "glove-rank-safe": _glove_rank_safe,
     # Qwen3-8B on an L4
     "qwen": _llm("qwen"),
     "qwen-think": _llm("qwen-think", thinking=True),
@@ -97,6 +104,7 @@ PLAYERS = {
     "qwen36-think": _llm("qwen36-think", server="Qwen36", thinking=True),
     "qwen36-hybrid": _llm("qwen36-hybrid", "HybridPlayer", server="Qwen36"),
     "qwen36-sim": _llm("qwen36-sim", "SimulatingPlayer", server="Qwen36"),
+    "qwen36-sim-cautious": _llm("qwen36-sim-cautious", "CautiousSimulatingPlayer", server="Qwen36"),
     # Qwen3.6 with the player guide from the subagent rounds (guide_player.py)
     "qwen36-guide": _llm("qwen36-guide", "GuidePlayer", server="Qwen36"),
     "qwen36-guide-think": _llm("qwen36-guide-think", "GuidePlayer", server="Qwen36", thinking=True),

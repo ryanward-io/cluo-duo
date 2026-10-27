@@ -398,6 +398,33 @@ class SimulatingPlayer(HybridPlayer):
         return best["clue"], best["run"]
 
 
+class CautiousSimulatingPlayer(SimulatingPlayer):
+    """Smart, with GloVe vetting its second and later guesses.
+
+    With a Claude partner, Qwen's clues worked but every game was lost on its second guess of
+    a clue (COW 2 -> BARN, then DINOSAUR). A first guess is the model's clearest reading; later
+    ones are kept only if the Bayesian GloVe guesser also rates them likely agents and unlikely
+    assassins under the same clue.
+    """
+
+    name = "qwen36-sim-cautious"
+
+    def __init__(self, seed: int | None = None, *, later_min_agent: float = 0.5, later_max_assassin: float = 0.1,
+                 **kwargs):
+        super().__init__(seed, **kwargs)
+        self.later_min_agent, self.later_max_assassin = later_min_agent, later_max_assassin
+
+    def next_guess(self, view: dict) -> int | None:
+        choice = super().next_guess(view)
+        if choice is None or view["clue"]["guesses"] == 0 or view["clue"]["word"] not in self.fallback.v.index:
+            return choice
+        p = self.fallback.posterior(view).get(choice)
+        if p is None or p["G"] < self.later_min_agent or p["A"] > self.later_max_assassin:
+            self.log.append({"vetoed": view["words"][choice], "posterior": p})
+            return None
+        return choice
+
+
 def candidates_schema(agents: list[str], n: int) -> dict:
     one = {
         "type": "object",

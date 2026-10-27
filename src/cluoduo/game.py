@@ -9,7 +9,7 @@ time. Guesses are judged by the clue giver's key:
 - bystander: the word is marked as a bystander for the clue giver and the turn ends;
 - assassin: the game is lost.
 
-The team wins by finding all 15 distinct agents within 9 turns. A side with no agents
+The team wins by finding all 15 distinct agents within 9 turns (10 or 11 on easier settings). A side with no agents
 left to find stops giving clues, so its partner gives the rest.
 
 Sudden death (official Duet rule, optional here and off by default): if the turns run out
@@ -35,6 +35,7 @@ SIDES: tuple[Side, Side] = ("a", "b")
 GREEN, BYSTANDER, ASSASSIN = "G", "N", "A"
 BOARD_SIZE = 25
 TURNS = 9
+EXTRA_TURNS = 2  # the box includes two extra timer tokens for an easier game: 10 or 11 turns
 MAX_CLUE_NUMBER = 9
 
 # How the two keys overlap: (side a, side b) -> number of cards.
@@ -64,7 +65,9 @@ def other(side: Side) -> Side:
 
 
 def new_game(seed: int | None = None, first_clue: Side = "a", game_id: str | None = None,
-             sudden_death: bool = False) -> State:
+             sudden_death: bool = False, turns: int = TURNS) -> State:
+    if not TURNS <= turns <= TURNS + EXTRA_TURNS:
+        raise RuleError(f"Turns must be between {TURNS} and {TURNS + EXTRA_TURNS}.")
     seed = secrets.randbelow(2**31) if seed is None else seed
     rng = random.Random(seed)
     words = rng.sample(WORDS, BOARD_SIZE)
@@ -77,7 +80,8 @@ def new_game(seed: int | None = None, first_clue: Side = "a", game_id: str | Non
         "key": {"a": [p[0] for p in pairs], "b": [p[1] for p in pairs]},
         "found": [False] * BOARD_SIZE,
         "bystanders": {"a": [], "b": []},  # indices marked as bystanders on that side's key
-        "turns_left": TURNS,
+        "turns": turns,
+        "turns_left": turns,
         "giver": first_clue,
         "phase": "clue",  # clue -> guess -> clue ... -> (sudden_death) -> over
         "clue": None,  # {"word", "number", "giver", "guesses"} while guessing
@@ -164,7 +168,7 @@ def give_clue(state: State, side: Side, word: str, number: int) -> State:
     s = deepcopy(state)
     s["clue"] = {"word": clue, "number": number, "giver": side, "guesses": 0}
     s["phase"] = "guess"
-    s["history"].append({"type": "clue", "side": side, "word": clue, "number": number, "turn": TURNS - s["turns_left"] + 1})
+    s["history"].append({"type": "clue", "side": side, "word": clue, "number": number, "turn": s.get("turns", TURNS) - s["turns_left"] + 1})
     return s
 
 

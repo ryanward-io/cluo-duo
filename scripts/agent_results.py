@@ -45,6 +45,8 @@ ROUNDS = {
     "guide v6 (Sonnet)": range(92, 96),
     "v7 + sudden death (Haiku)": range(96, 104),
     "v7 + sudden death (Sonnet)": range(104, 112),
+    "v8 (Haiku)": range(112, 120),
+    "v8 (Sonnet)": range(120, 128),
 }
 
 
@@ -55,7 +57,8 @@ def round_summary(name: str, seeds: range) -> str:
         return f"{name:<20} no finished games"
     clues = [h for s in done for h in s["history"] if h["type"] == "clue"]
     count = lambda r: sum(s["result"] == r for s in done)
-    return (f"{name:<27} games {len(done):>2}  won {count('won'):>2}  assassin {count('assassin'):>2}  "
+    in_turns = sum(s["result"] == "won" and not any(h["type"] == "sudden_death" for h in s["history"]) for s in done)
+    return (f"{name:<27} games {len(done):>2}  won {count('won'):>2} (in 9 turns {in_turns:>2})  assassin {count('assassin'):>2}  "
             f"out of turns/sudden death {count('out_of_turns') + count('sudden_death'):>2}  avg found {sum(map(game.found_count, done)) / len(done):4.1f}  "
             f"1-clues {sum(c['number'] == 1 for c in clues) / len(clues):4.0%}  "
             f"agents/clue {sum(map(game.found_count, done)) / len(clues):4.2f}")

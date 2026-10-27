@@ -107,6 +107,7 @@ def main() -> None:
     n = sub.add_parser("new")
     n.add_argument("--seed", type=int, required=True)
     n.add_argument("--partner", choices=["glove-rank", "none"], default="glove-rank")
+    n.add_argument("--sudden-death", action="store_true", help="play on in sudden death when the turns run out")
     commands = {name: sub.add_parser(name) for name in ("show", "wait", "stop", "clue", "guess")}
     for c in commands.values():
         c.add_argument("game")
@@ -121,7 +122,8 @@ def main() -> None:
     if args.cmd == "new":
         # Same boards and first player as scripts/evaluate.py, so results line up with self-play.
         state = game.new_game(seed=args.seed, first_clue="a" if args.seed % 2 == 0 else "b",
-                              game_id=f"seed{args.seed}" + ("-duo" if args.partner == "none" else ""))
+                              game_id=f"seed{args.seed}" + ("-duo" if args.partner == "none" else ""),
+                              sudden_death=args.sudden_death)
         state["partner"] = args.partner
         state = partner_moves(state)
     elif args.cmd in ("show", "wait"):

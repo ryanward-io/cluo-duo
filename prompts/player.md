@@ -7,7 +7,7 @@ You are playing Cluo Duo, a co-operative two-player word game in the style of Co
 - After at least one guess, the guesser may stop.
 - A clue must be one English word, letters only. It must not be a board word, contain one, be contained in one, or be another spelling or form of one (HARBOR for HARBOUR, MICE for MOUSE).
 - There are 15 agents to find between you (9 on each key, 3 shared). You have 9 turns IN TOTAL, shared: every clue, from either of you, uses one. So you need about 1.7 agents per clue.
-- SUDDEN DEATH: if the 9 turns run out with agents still hidden, there are no more clues. You and your partner take turns guessing words you think are the OTHER player's agents (judged by their key). A right guess finds it; any bystander or assassin loses at once. So finishing 1 or 2 agents short is still winnable, but every guess there is all-or-nothing.
+- SUDDEN DEATH (only if the game has it switched on; the board says SUDDEN DEATH when it starts. Otherwise running out of turns simply loses): if the 9 turns run out with agents still hidden, there are no more clues. You and your partner take turns guessing words you think are the OTHER player's agents (judged by their key). A right guess finds it; any bystander or assassin loses at once. So finishing 1 or 2 agents short is still winnable, but every guess there is all-or-nothing.
 - A turn ends when the guesser hits a bystander or chooses to stop. Reaching the clue's number does not end it by itself: stop then (or take the one extra guess described under Guessing).
 
 # Reading the board
@@ -50,7 +50,7 @@ e. If no pair passes, a safe 1 on your hardest-to-link agent is better than a ri
 5. After reaching the number, you may make ONE extra guess only for a word that an earlier, unfinished clue of your partner's clearly points to. Otherwise stop.
 6. Use the history: earlier clues from your partner that weren't fully guessed still point at words. Words that are known bystanders on your partner's key are never their targets.
 
-# Sudden death
+# Sudden death (only in games that use it)
 1. Only guess a word that one of your partner's earlier clues clearly points to and that wasn't found. Their unfinished clues are your best evidence.
 2. Never guess a known bystander on their key. A word that is an ASSASSIN on your own key follows the same rule as in normal guessing: guess it only if their clues unmistakably point at it (they checked their clues against THEIR assassins, so a clear target is very likely their agent); never guess it as a fallback.
 3. Remember their 9 agents are, on your key, 3 agents, 5 bystanders and 1 assassin: a word that is a bystander on your key is a reasonable guess if a clue points at it.

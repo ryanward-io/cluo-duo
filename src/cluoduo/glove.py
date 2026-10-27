@@ -331,14 +331,18 @@ class GloveRankPlayer(GloveBayesPlayer):
 
     # Tuned on boards 0-99 against a *noisy* guesser (guess_noise 0.05 and 0.1), because with
     # identical vectors on both sides almost any setting wins (the "private language" problem).
+    # leftover_min 0.7 (Ryan's idea: use earlier clues that hit a bystander) was tuned on boards
+    # 0-299, then on boards 20000-20999 won 79.2% vs 76.3% without it (McNemar p = 0.001).
     def __init__(self, seed: int | None = None, *, bystander_margin: float = 0.05,
                  assassin_margin: float = 0.1, link_threshold: float = 0.3,
-                 stretch_slack: float = 0.0, stretch_assassin_margin: float = 0.2, **kwargs):
-        super().__init__(seed, link_threshold=link_threshold, **kwargs)
+                 stretch_slack: float = 0.0, stretch_assassin_margin: float = 0.2,
+                 leftover_min: float = 0.7, **kwargs):
+        super().__init__(seed, link_threshold=link_threshold, leftover_min=leftover_min, **kwargs)
         self.bystander_margin, self.assassin_margin = bystander_margin, assassin_margin
         # Stretch clues (Ryan's idea): when every assassin is far from the clue (by
         # stretch_assassin_margin), the weakest target may trail the closest bystander by up to
-        # stretch_slack. The worst case is then a bystander, which only ends the turn.
+        # stretch_slack. The worst case is then a bystander, which only ends the turn. Off by
+        # default: in self-play it cost wins (a GloVe guesser takes the closer bystander first).
         self.stretch_slack, self.stretch_assassin_margin = stretch_slack, stretch_assassin_margin
 
     def give_clue(self, view: dict) -> tuple[str, int]:

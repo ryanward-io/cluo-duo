@@ -110,6 +110,7 @@ def main() -> None:
                    help="the AI on side b (any player in players.PLAYERS), or none for two agents")
     n.add_argument("--sudden-death", action="store_true", help="play on in sudden death when the turns run out")
     n.add_argument("--tag", default="", help="suffix for the game id, to replay the same board again (seed12-duo-v9)")
+    n.add_argument("--turns", type=int, default=game.TURNS, help="9 (standard), 10 or 11")
     commands = {name: sub.add_parser(name) for name in ("show", "wait", "stop", "clue", "guess")}
     for c in commands.values():
         c.add_argument("game")
@@ -126,7 +127,7 @@ def main() -> None:
         state = game.new_game(seed=args.seed, first_clue="a" if args.seed % 2 == 0 else "b",
                               game_id=f"seed{args.seed}" + ("-duo" if args.partner == "none" else "")
                               + (f"-{args.tag}" if args.tag else ""),
-                              sudden_death=args.sudden_death)
+                              sudden_death=args.sudden_death, turns=args.turns)
         state["partner"] = args.partner
         state = partner_moves(state)
     elif args.cmd in ("show", "wait"):

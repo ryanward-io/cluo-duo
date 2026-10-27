@@ -354,6 +354,7 @@ class SimulatingPlayer(HybridPlayer):
 
     name = "qwen-sim"
     REHEARSALS = 4
+    rehearsal_sets_number = True  # False: the rehearsal only vetoes clues, it doesn't shrink them
 
     # GloVe now only guards against assassins: the rehearsal decides how many targets the clue
     # really reaches, which GloVe judged badly for the model's knowledge-based links.
@@ -392,6 +393,14 @@ class SimulatingPlayer(HybridPlayer):
         with ThreadPoolExecutor(len(shortlist)) as pool:
             rehearsed = list(pool.map(rehearse, shortlist))
         self.log.append({"rehearsed": rehearsed})
+        if not self.rehearsal_sets_number:
+            # Rehearsal as a safety check only: drop clues that lead to an assassin or whose
+            # first pick isn't one of my agents; otherwise keep every target. A miss on a later
+            # target is usually a bystander, which only ends the turn.
+            ok = [r for r in rehearsed if r["stopped_on"] != "assassin" and r["run"] >= 1]
+            if ok:
+                best = max(ok, key=lambda r: (len(r.get("kept", r["targets"])), r["run"], r["margin"]))
+                return best["clue"], len(best.get("kept", best["targets"]))
         best = max(rehearsed, key=lambda r: (r["run"], r["margin"]))
         if best["run"] == 0:
             return super().choose(view, safe)
@@ -436,6 +445,10 @@ class SmartPlayer(SimulatingPlayer):
     """
 
     name = "smart"
+
+    def __init__(self, seed: int | None = None, *, full_numbers: bool = False, **kwargs):
+        super().__init__(seed, **kwargs)
+        self.rehearsal_sets_number = not full_numbers
 
     def give_clue(self, view: dict) -> tuple[str, int]:
         try:

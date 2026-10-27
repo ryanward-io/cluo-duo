@@ -107,6 +107,7 @@ PLAYERS = {
     "qwen36-sim-cautious": _llm("qwen36-sim-cautious", "CautiousSimulatingPlayer", server="Qwen36"),
     # Live tiers
     "smart": _llm("smart", "SmartPlayer", server="Qwen36"),
+    "smart-full": _llm("smart-full", "SmartPlayer", server="Qwen36", full_numbers=True),
     # Qwen3.6 with the player guide from the subagent rounds (guide_player.py)
     "qwen36-guide": _llm("qwen36-guide", "GuidePlayer", server="Qwen36"),
     "qwen36-guide-think": _llm("qwen36-guide-think", "GuidePlayer", server="Qwen36", thinking=True),

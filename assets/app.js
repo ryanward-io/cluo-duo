@@ -13,7 +13,7 @@ function skull(cls) {
   return i;
 }
 const PARTNERS = { random: "Random", "glove-sum": "Primitive", "glove-bayes": "Primitive + Bayesian", "glove-rank": "Basic",
-  "llm-glove": "Clever", llm: "Smart" };
+  "llm-glove": "Smart", llm: "Advanced" };
 // Bystander marks: a pawn for your key, an upside-down pawn for your partner's.
 const PAWN = '<svg class="pawn" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="4" r="2.7" fill="currentColor"/><path fill="currentColor" d="M5.4 7.4h5.2l-1 4h1.9l1.2 2.9H3.3l1.2-2.9h1.9z"/></svg>';
 function pawn(cls) {

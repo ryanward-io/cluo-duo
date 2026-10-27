@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cluo Duo</title>
   <meta name="description" content="Free online Codenames Duet alternative: a two-player co-operative word game you play with an AI partner.">
-  <link rel="stylesheet" href="assets/app.css?v=202610271422">
-  <script src="assets/app.js?v=202610271422" type="module"></script>
+  <link rel="stylesheet" href="assets/app.css?v=202610271447">
+  <script src="assets/app.js?v=202610271447" type="module"></script>
 </head>
 <body>
   <header class="site">
@@ -60,6 +60,7 @@
         <p id="bayes-tip" class="tip" role="tooltip">Bayesian: weighs its guesses using what the board and its own key reveal, and only gives clues when its targets clearly beat danger words.</p>
       </fieldset>
 
+      <label class="check"><input type="checkbox" id="tips"> Show advanced tips <span class="muted">(odds for your partner's key, and the pace you need)</span></label>
       <button id="start" type="button">Start game</button>
       <details class="rules">
         <summary>How to play</summary>
@@ -86,6 +87,7 @@
         <span id="turns"></span>
       </div>
 
+      <div id="tips-panel" class="panel tips" hidden></div>
       <div id="action" class="panel action" aria-live="polite"></div>
       <div id="error" class="error" role="alert"></div>
 

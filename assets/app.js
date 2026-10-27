@@ -3,6 +3,7 @@
 const params = new URLSearchParams(location.search);
 const API = params.get("api") || "https://ryanward-io--cluo-duo.us-east.modal.run";
 const SAVE_KEY = "cluo-duo:game";
+const TIPS_KEY = "cluo-duo:tips";
 
 const $ = (s) => document.querySelector(s);
 const SKULL = '<svg class="skull" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M8 1C4.1 1 1.5 3.6 1.5 7c0 2 .9 3.4 2.3 4.2V13a1 1 0 0 0 1 1h.9v-1.5h1V14h2.6v-1.5h1V14h.9a1 1 0 0 0 1-1v-1.8c1.4-.8 2.3-2.2 2.3-4.2C14.5 3.6 11.9 1 8 1zM5.3 9.6a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2zm5.4 0a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2zM8 11.2l-.9-1.6h1.8z"/></svg>';
@@ -45,6 +46,70 @@ function el(tag, attrs = {}, ...children) {
   }
   for (const c of children.flat()) if (c != null && c !== false) n.append(c.nodeType ? c : String(c));
   return n;
+}
+
+// ---------- advanced tips: odds for the partner's key ----------
+
+// How the two keys overlap (game.KEY_LAYOUT): for each colour on my key, how many words are
+// each colour on my partner's. The layout is symmetric, so it reads the same from either side.
+const LAYOUT = { G: { G: 3, N: 5, A: 1 }, N: { G: 5, N: 7, A: 1 }, A: { G: 1, N: 1, A: 1 } };
+const NAMES = { G: "agent", N: "bystander", A: "assassin" };
+
+function tipsOn() {
+  try { return localStorage.getItem(TIPS_KEY) === "1"; } catch (_) { return false; }
+}
+
+// What the game so far has revealed about my partner's key: my guesses on their clues (and in
+// sudden death) show the colour on their key; a found word that isn't my agent must be theirs.
+function knownPartnerKey(s) {
+  const known = {};
+  for (const h of s.history) if (h.type === "guess" && h.side === "a") known[h.index] = h.outcome;
+  s.found.forEach((f, i) => { if (f && s.my_key[i] !== "G") known[i] = "G"; });
+  for (const i of s.bystanders.b) known[i] = "N";
+  return known;
+}
+
+// P(colour on partner's key) for a word, given its colour on mine: the rules' counts, minus
+// what's already been revealed, spread evenly over the words still unknown.
+function partnerOdds(s) {
+  const known = knownPartnerKey(s);
+  const odds = {};
+  for (const mine of "GNA") {
+    const left = { ...LAYOUT[mine] };
+    const unknown = [];
+    s.my_key.forEach((k, i) => {
+      if (k !== mine) return;
+      if (i in known) left[known[i]] -= 1; else unknown.push(i);
+    });
+    const total = left.G + left.N + left.A || 1;
+    odds[mine] = { G: left.G / total, N: left.N / total, A: left.A / total, words: unknown.filter((i) => !s.found[i]).length };
+  }
+  return odds;
+}
+
+const pct = (x) => `${Math.round(x * 100)}%`;
+
+function renderTips() {
+  const panel = $("#tips-panel");
+  const s = state;
+  panel.hidden = !tipsOn() || !s || s.phase === "over";
+  if (panel.hidden) return;
+  const left = s.total_agents - s.found_count;
+  const pace = s.phase === "sudden_death"
+    ? `Sudden death: ${left} agent${left === 1 ? "" : "s"} left, and every guess must be right.`
+    : `${left} agents left in ${s.turns_left} turn${s.turns_left === 1 ? "" : "s"}: you need ${(left / Math.max(s.turns_left, 1)).toFixed(1)} per turn.`;
+  const odds = partnerOdds(s);
+  const rows = [["G", "Your agents"], ["N", "Your bystanders"], ["A", "Your assassins"]].map(([k, label]) => {
+    const o = odds[k];
+    return el("tr", {}, el("th", { scope: "row" }, label), el("td", {}, pct(o.G)), el("td", {}, pct(o.N)), el("td", { class: o.A >= 0.2 ? "risky" : "" }, pct(o.A)));
+  });
+  panel.replaceChildren(
+    el("p", { class: "pace" }, pace),
+    el("table", {},
+      el("caption", {}, "What a word you can't see yet is likely to be on your partner's key"),
+      el("thead", {}, el("tr", {}, el("th", {}, ""), el("th", { scope: "col" }, "their agent"), el("th", { scope: "col" }, "bystander"), el("th", { scope: "col" }, "assassin"))),
+      el("tbody", {}, ...rows)),
+    el("p", { class: "muted hint" }, "From the rules: of your 9 agents, 3 are theirs too, 5 are their bystanders and 1 is their assassin; your 3 assassins are one of each for them. The odds update as guesses reveal their key."));
 }
 
 function save(id) {
@@ -147,6 +212,7 @@ function render(before = null) {
   turns.classList.toggle("low", low);
   $("#partner-name").textContent = `Partner: ${PARTNERS[state.partner] || state.partner}`;
   renderBoard(before);
+  renderTips();
   renderLog();
   renderAction();
 }
@@ -166,13 +232,17 @@ function cardInfo(i) {
 
 function renderBoard(before) {
   const board = $("#board");
+  const odds = tipsOn() && state.phase !== "over" ? partnerOdds(state) : null;
+  const known = odds ? knownPartnerKey(state) : {};
   board.replaceChildren(...state.words.map((word, i) => {
     const c = cardInfo(i);
+    const o = odds && c.guessable && !(i in known) ? odds[c.myKey] : null;
     const label = [word,
       state.found[i] && "agent found",
       c.myKey === "G" && "your agent", c.myKey === "A" && "your assassin",
       c.mine && "bystander on your key", c.theirs && "bystander on partner's key",
-      c.partnerKey && `partner's key: ${OUTCOME[c.partnerKey]}`].filter(Boolean).join(", ");
+      c.partnerKey && `partner's key: ${OUTCOME[c.partnerKey]}`,
+      o && `odds on partner's key: ${pct(o.G)} agent, ${pct(o.N)} bystander, ${pct(o.A)} assassin`].filter(Boolean).join(", ");
     const changed = before && (before.found[i] !== state.found[i]
       || before.bystanders.a.includes(i) !== c.mine || before.bystanders.b.includes(i) !== c.theirs);
     const cls = ["card", state.found[i] && "found", c.dead && "dead", c.guessable && "guessable",
@@ -182,10 +252,12 @@ function renderBoard(before) {
       c.partnerKey === "G" && el("i", { class: "dot agent partner" }), c.partnerKey === "A" && skull("partner"));
     const marks = el("span", { class: "marks", "aria-hidden": "true" },
       c.mine && pawn("mine"), c.theirs && pawn("theirs"));
+    const chance = o && el("span", { class: `chance${o.A >= 0.2 ? " risky" : ""}`, "aria-hidden": "true" }, pct(o.G));
     return el("button", {
       class: cls, type: "button", "aria-label": label, disabled: !c.guessable,
+      title: o ? `Partner's key: ${pct(o.G)} agent · ${pct(o.N)} bystander · ${pct(o.A)} assassin` : null,
       onclick: () => act(`/api/games/${state.id}/guess`, { index: i }),
-    }, keyDots, marks, el("span", { class: "word" }, word));
+    }, keyDots, marks, el("span", { class: "word" }, word), chance);
   }));
   fitWords();
 }
@@ -290,6 +362,12 @@ for (const i of document.querySelectorAll("[data-pawn]")) i.innerHTML = PAWN;
 for (const term of document.querySelectorAll(".term")) {
   term.dataset.tip = document.getElementById(term.getAttribute("aria-describedby")).textContent;
 }
+
+$("#tips").checked = tipsOn();
+$("#tips").addEventListener("change", (e) => {
+  try { localStorage.setItem(TIPS_KEY, e.target.checked ? "1" : "0"); } catch (_) { /* storage blocked */ }
+  if (state) render();
+});
 
 $("#start").addEventListener("click", () => {
   const first = document.querySelector('input[name="first"]:checked').value;

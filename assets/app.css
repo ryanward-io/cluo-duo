@@ -192,3 +192,16 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .term:hover::after, .term:focus-visible::after, .term:focus::after { visibility: visible; opacity: 1; }
 .tip { display: none; }
 @media (prefers-reduced-motion: reduce) { .term::after { transition: none; } }
+
+/* ---------- advanced tips ---------- */
+.check { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; font-weight: 600; flex-wrap: wrap; }
+.check .muted { font-weight: 400; font-size: 0.85rem; }
+.tips { font-size: 0.9rem; }
+.tips .pace { margin: 0 0 8px; font-weight: 600; }
+.tips table { border-collapse: collapse; width: 100%; max-width: 520px; }
+.tips caption { text-align: left; color: var(--muted); font-size: 0.82rem; margin-bottom: 4px; }
+.tips th, .tips td { padding: 3px 8px; text-align: right; border-bottom: 1px solid var(--border); }
+.tips th[scope="row"], .tips thead th:first-child { text-align: left; font-weight: 500; }
+.tips .risky, .chance.risky { color: var(--error); font-weight: 700; }
+.tips .hint { margin: 8px 0 0; }
+.card .chance { position: absolute; bottom: 2px; right: 5px; font-size: 0.68rem; font-weight: 600; color: var(--muted); }

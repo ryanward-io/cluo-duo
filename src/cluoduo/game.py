@@ -12,8 +12,8 @@ time. Guesses are judged by the clue giver's key:
 The team wins by finding all 15 distinct agents within 9 turns. A side with no agents
 left to find stops giving clues, so its partner gives the rest.
 
-Sudden death (official Duet rule): if the turns run out with agents still hidden, there
-are no more clues. Players take turns guessing words they think are their partner's
+Sudden death (official Duet rule, optional here and off by default): if the turns run out
+with agents still hidden, there are no more clues. Players take turns guessing words they think are their partner's
 agents, judged by the partner's key; any bystander or assassin loses. Games saved before
 this rule existed don't have "sudden_death" set and simply end when the turns run out.
 
@@ -64,7 +64,7 @@ def other(side: Side) -> Side:
 
 
 def new_game(seed: int | None = None, first_clue: Side = "a", game_id: str | None = None,
-             sudden_death: bool = True) -> State:
+             sudden_death: bool = False) -> State:
     seed = secrets.randbelow(2**31) if seed is None else seed
     rng = random.Random(seed)
     words = rng.sample(WORDS, BOARD_SIZE)

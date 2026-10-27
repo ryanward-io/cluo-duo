@@ -25,6 +25,7 @@ class NewGame(BaseModel):
     first: Literal["human", "partner"] = "partner"
     partner: str = "random"
     seed: int | None = Field(default=None, ge=0, lt=2**31)
+    sudden_death: bool = False
 
 
 class Clue(BaseModel):
@@ -72,7 +73,8 @@ def create_app(store: Store, allow_local: bool = False) -> FastAPI:
     def new(body: NewGame) -> dict:
         if body.partner not in PLAYERS:
             raise HTTPException(400, f"Unknown partner {body.partner!r}.")
-        state = game.new_game(seed=body.seed, first_clue=HUMAN if body.first == "human" else AI)
+        state = game.new_game(seed=body.seed, first_clue=HUMAN if body.first == "human" else AI,
+                              sudden_death=body.sudden_death)
         state["partner"] = body.partner
         state = play_partner(state, AI, partner_for(state))
         return respond(state)

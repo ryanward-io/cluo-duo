@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cluo Duo</title>
   <meta name="description" content="Free online Codenames Duet alternative: a two-player co-operative word game you play with an AI partner.">
-  <link rel="stylesheet" href="assets/app.css?v=202610271447">
-  <script src="assets/app.js?v=202610271447" type="module"></script>
+  <link rel="stylesheet" href="assets/app.css?v=202610271459">
+  <script src="assets/app.js?v=202610271459" type="module"></script>
 </head>
 <body>
   <header class="site">
@@ -60,6 +60,7 @@
         <p id="bayes-tip" class="tip" role="tooltip">Bayesian: weighs its guesses using what the board and its own key reveal, and only gives clues when its targets clearly beat danger words.</p>
       </fieldset>
 
+      <label class="check"><input type="checkbox" id="sudden-death"> Sudden death <span class="muted">(if the turns run out, keep guessing with no clues; any wrong guess loses)</span></label>
       <label class="check"><input type="checkbox" id="tips"> Show advanced tips <span class="muted">(odds for your partner's key, and the pace you need)</span></label>
       <button id="start" type="button">Start game</button>
       <details class="rules">
@@ -69,7 +70,7 @@
           <li>Take turns giving a <strong>one-word clue and a number</strong> that point to agents on your own key. Your partner guesses words one at a time.</li>
           <li>When you guess, your partner's key decides: an agent and you can keep going; a bystander ends the turn; an assassin loses the game.</li>
           <li>Clues can't be a word on the board or contain one (or be contained in one).</li>
-          <li>Find all 15 agents within 9 turns to win. If the turns run out, it's <strong>sudden death</strong>: no more clues, you take turns guessing your partner's agents, and any wrong guess loses.</li>
+          <li>Find all 15 agents within 9 turns to win. With the optional <strong>sudden death</strong> rule, running out of turns isn't the end: no more clues, you take turns guessing your partner's agents, and any wrong guess loses.</li>
         </ul>
       </details>
     </section>

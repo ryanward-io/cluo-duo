@@ -151,7 +151,7 @@ def play_partner(state: game.State, side: game.Side, player: Player) -> game.Sta
 
 
 def self_play(clue_a: Player, clue_b: Player, seed: int, first: game.Side = "a",
-              sudden_death: bool = True) -> game.State:
+              sudden_death: bool = False) -> game.State:
     """Two AI players on one board, for evaluation. Side a uses clue_a for everything it does, and so on."""
     state = game.new_game(seed=seed, first_clue=first, sudden_death=sudden_death)
     players = {"a": clue_a, "b": clue_b}

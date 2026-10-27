@@ -75,14 +75,14 @@ def test_view_hides_partner_key_until_over():
 def test_self_play_always_finishes():
     results = Counter(self_play(RandomPlayer(i), RandomPlayer(i + 1000), seed=i)["result"] for i in range(200))
     assert sum(results.values()) == 200
-    assert set(results) <= {"won", "assassin", "sudden_death"}  # out_of_turns now leads to sudden death
-    old_rules = Counter(self_play(RandomPlayer(i), RandomPlayer(i + 1000), seed=i, sudden_death=False)["result"]
-                        for i in range(50))
-    assert set(old_rules) <= {"won", "assassin", "out_of_turns"}
+    assert set(results) <= {"won", "assassin", "out_of_turns"}
+    with_sudden_death = Counter(self_play(RandomPlayer(i), RandomPlayer(i + 1000), seed=i, sudden_death=True)["result"]
+                                for i in range(50))
+    assert set(with_sudden_death) <= {"won", "assassin", "sudden_death"}
 
 
 def test_sudden_death():
-    s = game.new_game(seed=3, first_clue="a")
+    s = game.new_game(seed=3, first_clue="a", sudden_death=True)
     s["turns_left"] = 1
     s = game.give_clue(s, "a", "ZZZ", 1)
     bystander = next(i for i, k in enumerate(s["key"]["a"]) if k == "N")
@@ -280,7 +280,7 @@ def test_spelling_variants_of_board_words_are_not_clues():
 def test_api_sudden_death_guess():
     store = MemoryStore()
     client = TestClient(create_app(store))
-    v = client.post("/api/games", json={"first": "human", "seed": 5, "partner": "glove-rank"}).json()
+    v = client.post("/api/games", json={"first": "human", "seed": 5, "partner": "glove-rank", "sudden_death": True}).json()
     state = store.get(v["id"])
     state.update(phase="sudden_death", guesser="a", turns_left=0, clue=None, giver="a")
     store.put(state)

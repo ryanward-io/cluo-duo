@@ -438,7 +438,9 @@ class CautiousSimulatingPlayer(SimulatingPlayer):
 
 
 class SmartPlayer(SimulatingPlayer):
-    """The live "Smart" partner: Qwen gives the clues, the Bayesian GloVe guesser guesses.
+    """The "Smart" design: the model gives the clues, the Bayesian GloVe guesser guesses.
+
+    The live Smart partner runs it on Gemma 4 31B with llm_guesses=True (see players.py).
 
     With a Claude partner, Qwen's clues (proposed, rehearsed, vetted by GloVe) were good, but
     every game was lost on Qwen's loose second guesses. Basic's Bayesian guesser held up

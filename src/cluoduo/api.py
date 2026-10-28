@@ -30,7 +30,7 @@ class NewGame(BaseModel):
 
 
 # GPU-backed partners: each new game may wake a GPU, so cap them per day (UTC) to protect the credit.
-GPU_PARTNERS = {"smart": "Qwen36"}
+GPU_PARTNERS = {"smart": "Gemma31"}
 GPU_GAMES_PER_DAY = 40
 
 

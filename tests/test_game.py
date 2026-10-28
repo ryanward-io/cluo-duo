@@ -369,7 +369,7 @@ def test_smart_partner_daily_cap_and_warm_up(monkeypatch):
     monkeypatch.setitem(api.PLAYERS, "smart", lambda seed=None: RandomPlayer(seed))  # no GPU in tests
     warmed = []
     client = TestClient(create_app(MemoryStore(), warm_up=warmed.append))
-    assert client.post("/api/warm", json={"partner": "smart"}).json() == {"ok": True} and warmed == ["Qwen36"]
+    assert client.post("/api/warm", json={"partner": "smart"}).json() == {"ok": True} and warmed == ["Gemma31"]
     assert client.post("/api/games", json={"first": "human", "partner": "smart"}).status_code == 200
     assert client.post("/api/games", json={"first": "human", "partner": "smart"}).status_code == 429
     assert client.post("/api/warm", json={"partner": "glove-rank"}).json() == {"ok": False}

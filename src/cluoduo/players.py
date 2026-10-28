@@ -106,7 +106,9 @@ PLAYERS = {
     "qwen36-sim": _llm("qwen36-sim", "SimulatingPlayer", server="Qwen36"),
     "qwen36-sim-cautious": _llm("qwen36-sim-cautious", "CautiousSimulatingPlayer", server="Qwen36"),
     # Live tiers
-    "smart": _llm("smart", "SmartPlayer", server="Qwen36"),
+    # Live tier since 28 Oct 2026: Gemma 4 31B gives clues and guesses (best reference-partner result)
+    "smart": _llm("smart", "SmartPlayer", server="Gemma31", llm_guesses=True),
+    "smart-qwen36": _llm("smart-qwen36", "SmartPlayer", server="Qwen36"),  # live Smart until 28 Oct 2026
     "smart-full": _llm("smart-full", "SmartPlayer", server="Qwen36", full_numbers=True),
     # Same Smart design on the dense Qwen3.6-27B (more model per decision)
     "smart27": _llm("smart27", "SmartPlayer", server="Qwen27"),

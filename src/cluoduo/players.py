@@ -116,6 +116,7 @@ PLAYERS = {
     # Same Smart design on Gemma 4 31B (a different model family of the same size)
     "smart-gemma": _llm("smart-gemma", "SmartPlayer", server="Gemma31"),
     "smart-gemma-llmguess": _llm("smart-gemma-llmguess", "SmartPlayer", server="Gemma31", llm_guesses=True),
+    "smart-gemma-noglove": _llm("smart-gemma-noglove", "SmartPlayer", server="Gemma31", llm_guesses=True, glove_vetting=False),
     # ...and on gpt-oss-120b (OpenAI) and Mistral Small 3.2 24B (Mistral AI)
     "smart-gptoss": _llm("smart-gptoss", "SmartPlayer", server="GptOss"),
     "smart-gptoss-llmguess": _llm("smart-gptoss-llmguess", "SmartPlayer", server="GptOss", llm_guesses=True),

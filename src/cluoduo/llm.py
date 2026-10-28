@@ -264,15 +264,19 @@ class HybridPlayer(LLMPlayer):
     There is no minimum similarity for the targets themselves: deciding what links is the
     model's job. GloVe only says "this clue is no closer to your agents than to a danger word".
     Guessing is the same as the plain LLM partner.
+
+    `glove_vetting=False` skips step 2: every legal candidate keeps all its targets, so the model
+    alone judges safety. (GloVe's vocabulary still serves as the dictionary of real words.)
     """
 
     name = "qwen-hybrid"
     CANDIDATES = 8
 
     def __init__(self, seed: int | None = None, *, assassin_margin: float = 0.1,
-                 bystander_margin: float = 0.0, **kwargs):
+                 bystander_margin: float = 0.0, glove_vetting: bool = True, **kwargs):
         super().__init__(seed, **kwargs)
         self.assassin_margin, self.bystander_margin = assassin_margin, bystander_margin
+        self.glove_vetting = glove_vetting
 
     def give_clue(self, view: dict) -> tuple[str, int]:
         agents = self._agents(view)
@@ -320,12 +324,18 @@ class HybridPlayer(LLMPlayer):
         if clue not in v.index:
             result["problem"] = "not in the GloVe vocabulary"
             return result
+        key = view["my_key"]
+        if not self.glove_vetting:
+            index = {w: i for i, w in enumerate(view["words"])}
+            kept = [t for t in dict.fromkeys(map(str.upper, map(str, result["targets"])))
+                    if t in index and key[index[t]] == game.GREEN and not view["found"][index[t]]]
+            result.update(number=len(kept), margin=0.0, kept=kept)
+            return result
         from .glove import open_cards
 
         cards = open_cards(view, view["side"])
         sims = v.matrix[v.ids([view["words"][i] for i in cards])] @ v.matrix[v.index[clue]]
         sim = dict(zip(cards, sims.tolist()))
-        key = view["my_key"]
         danger = lambda colour: max((sim[i] for i in cards if key[i] == colour), default=-1.0)
         worst_assassin, worst_bystander = danger(game.ASSASSIN), danger(game.BYSTANDER)
         index = {w: i for i, w in enumerate(view["words"])}
@@ -369,7 +379,8 @@ class SimulatingPlayer(HybridPlayer):
 
         from .glove import open_cards
 
-        shortlist = sorted(safe, key=lambda r: (r["number"], r["margin"]), reverse=True)[:self.REHEARSALS]
+        # Without GloVe's margins there is nothing to shortlist by, so every candidate is rehearsed.
+        shortlist = sorted(safe, key=lambda r: (r["number"], r["margin"]), reverse=True)[:self.REHEARSALS if self.glove_vetting else None]
         cards = open_cards(view, view["side"])
         open_words = [view["words"][i] for i in cards]
         index = {w: i for i, w in enumerate(view["words"])}
@@ -405,6 +416,14 @@ class SimulatingPlayer(HybridPlayer):
                 best = max(ok, key=lambda r: (len(r.get("kept", r["targets"])), r["run"], r["margin"]))
                 return best["clue"], len(best.get("kept", best["targets"]))
         best = max(rehearsed, key=lambda r: (r["run"], r["margin"]))
+        if best["run"] == 0 and not self.glove_vetting:
+            # Every rehearsal missed. With no GloVe to rank the rest, give the first candidate that
+            # didn't lead to an assassin, for 1; if all did, the GloVe partner covers the turn.
+            ok = [r for r in rehearsed if r["stopped_on"] != "assassin"]
+            if ok:
+                return ok[0]["clue"], 1
+            self.log.append({"fallback": "clue"})
+            return self.fallback.give_clue(view)
         if best["run"] == 0:
             return super().choose(view, safe)
         return best["clue"], best["run"]

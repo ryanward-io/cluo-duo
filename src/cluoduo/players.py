@@ -111,6 +111,9 @@ PLAYERS = {
     # Same Smart design on the dense Qwen3.6-27B (more model per decision)
     "smart27": _llm("smart27", "SmartPlayer", server="Qwen27"),
     "smart27-llmguess": _llm("smart27-llmguess", "SmartPlayer", server="Qwen27", llm_guesses=True),
+    # Same Smart design on Gemma 4 31B (a different model family of the same size)
+    "smart-gemma": _llm("smart-gemma", "SmartPlayer", server="Gemma31"),
+    "smart-gemma-llmguess": _llm("smart-gemma-llmguess", "SmartPlayer", server="Gemma31", llm_guesses=True),
     "smart27-think": _llm("smart27-think", "SmartPlayer", server="Qwen27", thinking=True),
     "smart-think": _llm("smart-think", "SmartPlayer", server="Qwen36", thinking=True),
     # Qwen3.6 with the player guide from the subagent rounds (guide_player.py)

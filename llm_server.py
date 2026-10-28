@@ -38,6 +38,15 @@ image = (
     .env({"HF_XET_HIGH_PERFORMANCE": "1"})  # faster weight downloads from Hugging Face
 )
 
+# Gemma 4 needs a newer Transformers than vLLM 0.21 bundles, so it gets its own image with a
+# current vLLM; the Qwen servers stay on the version they were tested with.
+gemma_image = (
+    modal.Image.from_registry("nvidia/cuda:12.9.0-devel-ubuntu22.04", add_python="3.12")
+    .entrypoint([])
+    .uv_pip_install("vllm==0.32.0", "httpx==0.28.1")
+    .env({"HF_XET_HIGH_PERFORMANCE": "1"})
+)
+
 # Volumes persist between containers, so the weights download once, not on every cold start.
 hf_cache = modal.Volume.from_name("huggingface-cache", create_if_missing=True)
 vllm_cache = modal.Volume.from_name("vllm-cache", create_if_missing=True)
@@ -52,6 +61,7 @@ class Server:
     REVISION: str  # pinned so the model can't change under us
     VLLM_ARGS: list[str] = []
     SAMPLING: dict = {}  # the model card's recommended settings, sent with every request
+    REASONING_PARSER: str | None = "qwen3"  # keeps any <think> text out of the JSON answer (Qwen models)
 
     @modal.enter()
     def start(self) -> None:
@@ -60,7 +70,7 @@ class Server:
             "--revision", self.REVISION,
             "--served-model-name", "llm",
             "--host", "127.0.0.1", "--port", str(PORT),  # only reachable inside this container
-            "--reasoning-parser", "qwen3",  # keeps any <think> text out of the JSON answer
+            *(["--reasoning-parser", self.REASONING_PARSER] if self.REASONING_PARSER else []),
             *self.VLLM_ARGS,
         ]
         self.process = subprocess.Popen(cmd)
@@ -192,6 +202,34 @@ class Qwen27(Server):
     SAMPLING = {"top_p": 0.8, "top_k": 20, "presence_penalty": 1.5}
 
 
+@app.cls(
+    image=gemma_image,
+    gpu="L40S",
+    volumes=VOLUMES,
+    min_containers=0,
+    max_containers=1,
+    scaledown_window=5 * MINUTES,
+    timeout=5 * MINUTES,
+    startup_timeout=30 * MINUTES,
+)
+@modal.concurrent(max_inputs=64)
+class Gemma31(Server):
+    """Gemma 4 31B (Google): a dense model about the size of Qwen3.6-27B, from a different family,
+    to check whether Smart's ceiling is about Qwen or about model size."""
+
+    MODEL = "RedHatAI/gemma-4-31B-it-FP8-dynamic"
+    REVISION = "d4ab4f579dd3516f97d8a6a4c98d0653480bad15"
+    REASONING_PARSER = None
+    VLLM_ARGS = [
+        "--language-model-only",
+        "--max-model-len", "16384",
+        "--gpu-memory-utilization", "0.92",
+        "--max-num-seqs", "32",
+        "--max-cudagraph-capture-size", "32",
+    ]
+    SAMPLING = {"top_p": 0.95, "top_k": 64}  # model card
+
+
 @app.local_entrypoint()
 def main(model: str = "LLM") -> None:
     schema = {
@@ -200,7 +238,7 @@ def main(model: str = "LLM") -> None:
         "required": ["clue", "targets"],
     }
     start = time.time()
-    out = {"LLM": LLM, "Qwen36": Qwen36, "Qwen27": Qwen27}[model]().chat.remote(
+    out = {"LLM": LLM, "Qwen36": Qwen36, "Qwen27": Qwen27, "Gemma31": Gemma31}[model]().chat.remote(
         [{"role": "user", "content": "Give a one-word clue linking PENGUIN, OSTRICH and KITE (the bird). Reply as JSON."}],
         schema=schema,
     )

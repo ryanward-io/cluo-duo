@@ -67,7 +67,11 @@ REFERENCE |= {"ref + Smart, 10 turns": (range(200, 208), "smart-t10"),
               "ref + Smart on Qwen3.6-27B (dense)": (range(200, 208), "smart27"),
               "ref + Smart 27B, model also guesses": (range(200, 208), "smart27-llmguess"),
               "ref + Smart on Gemma 4 31B": (range(200, 208), "smart-gemma"),
-              "ref + Smart Gemma 31B, model also guesses": (range(200, 208), "smart-gemma-llmguess")}
+              "ref + Smart Gemma 31B, model also guesses": (range(200, 208), "smart-gemma-llmguess"),
+              "ref + Smart on gpt-oss-120b": (range(200, 208), "smart-gptoss"),
+              "ref + Smart gpt-oss, model also guesses": (range(200, 208), "smart-gptoss-llmguess"),
+              "ref + Smart on Mistral Small 3.2 24B": (range(200, 208), "smart-mistral"),
+              "ref + Smart Mistral, model also guesses": (range(200, 208), "smart-mistral-llmguess")}
 
 
 def round_summary(name: str, seeds: range, tag: str = "") -> str:

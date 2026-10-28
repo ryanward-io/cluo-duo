@@ -114,6 +114,11 @@ PLAYERS = {
     # Same Smart design on Gemma 4 31B (a different model family of the same size)
     "smart-gemma": _llm("smart-gemma", "SmartPlayer", server="Gemma31"),
     "smart-gemma-llmguess": _llm("smart-gemma-llmguess", "SmartPlayer", server="Gemma31", llm_guesses=True),
+    # ...and on gpt-oss-120b (OpenAI) and Mistral Small 3.2 24B (Mistral AI)
+    "smart-gptoss": _llm("smart-gptoss", "SmartPlayer", server="GptOss"),
+    "smart-gptoss-llmguess": _llm("smart-gptoss-llmguess", "SmartPlayer", server="GptOss", llm_guesses=True),
+    "smart-mistral": _llm("smart-mistral", "SmartPlayer", server="Mistral24"),
+    "smart-mistral-llmguess": _llm("smart-mistral-llmguess", "SmartPlayer", server="Mistral24", llm_guesses=True),
     "smart27-think": _llm("smart27-think", "SmartPlayer", server="Qwen27", thinking=True),
     "smart-think": _llm("smart-think", "SmartPlayer", server="Qwen36", thinking=True),
     # Qwen3.6 with the player guide from the subagent rounds (guide_player.py)

@@ -1,12 +1,14 @@
 """Infrastructure: open-source LLMs served by vLLM on Modal GPUs.
 
-Two models, each its own class (so its own GPU type and containers):
+Each model is its own class (so its own GPU type and containers):
 
 - `LLM`: Qwen3-8B (8-bit) on an L4, about $0.80/hour while running.
 - `Qwen27`: Qwen3.6-27B (8-bit, dense) on an L40S, about $2/hour while running.
 - `Qwen36`: Qwen3.6-35B-A3B (8-bit) on an L40S, about $2/hour while running. A "mixture of
   experts": 35B parameters in total but only ~3B are used per token, so it knows far more
   than the 8B model yet generates about as fast. The weights (37.5 GB) need the 48 GB card.
+- `Gemma31`, `GptOss`, `Mistral24`: other model families (Google, OpenAI, Mistral AI), tried
+  as Smart's model to see whether the family matters more than the size.
 
 This is a separate Modal app from the game API so each can be deployed on its own.
 There is deliberately NO public URL: the model is a Modal class whose `chat` method can
@@ -62,6 +64,8 @@ class Server:
     VLLM_ARGS: list[str] = []
     SAMPLING: dict = {}  # the model card's recommended settings, sent with every request
     REASONING_PARSER: str | None = "qwen3"  # keeps any <think> text out of the JSON answer (Qwen models)
+    THINKING_SWITCH = True  # the chat template takes Qwen's enable_thinking flag
+    MIN_TOKENS = 0  # models that always reason need room for it before the answer
 
     @modal.enter()
     def start(self) -> None:
@@ -102,9 +106,12 @@ class Server:
             "messages": messages,
             "max_tokens": max_tokens,
             "temperature": temperature,
-            "chat_template_kwargs": {"enable_thinking": thinking},  # Qwen's switch for step-by-step reasoning
             **self.SAMPLING,
         }
+        if self.THINKING_SWITCH:
+            body["chat_template_kwargs"] = {"enable_thinking": thinking}  # Qwen's switch for step-by-step reasoning
+        if max_tokens > 1:  # a 1-token warm-up stays tiny
+            body["max_tokens"] = max(max_tokens, self.MIN_TOKENS)
         if seed is not None:
             body["seed"] = seed
         if schema is not None:
@@ -230,6 +237,66 @@ class Gemma31(Server):
     SAMPLING = {"top_p": 0.95, "top_k": 64}  # model card
 
 
+@app.cls(
+    image=gemma_image,
+    gpu="H100",
+    volumes=VOLUMES,
+    min_containers=0,
+    max_containers=1,
+    scaledown_window=5 * MINUTES,
+    timeout=5 * MINUTES,
+    startup_timeout=30 * MINUTES,
+)
+@modal.concurrent(max_inputs=64)
+class GptOss(Server):
+    """OpenAI's gpt-oss-120b: a different family again, and much bigger (117B parameters, ~5B used
+    per token). Its 4-bit weights (~65 GB) need an 80 GB card. It always reasons before answering;
+    "low" effort keeps that short."""
+
+    MODEL = "openai/gpt-oss-120b"
+    REVISION = "b5c939de8f754692c1647ca79fbf85e8c1e70f8a"
+    REASONING_PARSER = "openai_gptoss"
+    THINKING_SWITCH = False
+    MIN_TOKENS = 4000
+    VLLM_ARGS = [
+        "--max-model-len", "16384",
+        "--gpu-memory-utilization", "0.92",
+        "--max-num-seqs", "32",
+        "--max-cudagraph-capture-size", "32",
+    ]
+    SAMPLING = {"temperature": 1.0, "top_p": 1.0, "reasoning_effort": "low"}  # model card
+
+
+@app.cls(
+    image=gemma_image,
+    gpu="A100-80GB",
+    volumes=VOLUMES,
+    min_containers=0,
+    max_containers=1,
+    scaledown_window=5 * MINUTES,
+    timeout=5 * MINUTES,
+    startup_timeout=30 * MINUTES,
+)
+@modal.concurrent(max_inputs=64)
+class Mistral24(Server):
+    """Mistral Small 3.2 (24B, dense, no reasoning mode) from Mistral AI: a fourth family. Full
+    16-bit weights (~48 GB), so it runs on an 80 GB card."""
+
+    MODEL = "mistralai/Mistral-Small-3.2-24B-Instruct-2506"
+    REVISION = "95a6d26c4bfb886c58daf9d3f7332c857cb27b43"
+    REASONING_PARSER = None
+    THINKING_SWITCH = False
+    VLLM_ARGS = [
+        "--tokenizer-mode", "mistral", "--config-format", "mistral", "--load-format", "mistral",  # model card
+        "--limit-mm-per-prompt", '{"image": 0}',  # text only
+        "--max-model-len", "16384",
+        "--gpu-memory-utilization", "0.90",
+        "--max-num-seqs", "32",
+        "--max-cudagraph-capture-size", "32",
+    ]
+    SAMPLING = {"temperature": 0.15}  # model card
+
+
 @app.local_entrypoint()
 def main(model: str = "LLM") -> None:
     schema = {
@@ -238,7 +305,7 @@ def main(model: str = "LLM") -> None:
         "required": ["clue", "targets"],
     }
     start = time.time()
-    out = {"LLM": LLM, "Qwen36": Qwen36, "Qwen27": Qwen27, "Gemma31": Gemma31}[model]().chat.remote(
+    out = {"LLM": LLM, "Qwen36": Qwen36, "Qwen27": Qwen27, "Gemma31": Gemma31, "GptOss": GptOss, "Mistral24": Mistral24}[model]().chat.remote(
         [{"role": "user", "content": "Give a one-word clue linking PENGUIN, OSTRICH and KITE (the bird). Reply as JSON."}],
         schema=schema,
     )

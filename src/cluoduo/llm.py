@@ -18,6 +18,7 @@ Design:
 from __future__ import annotations
 
 import json
+import threading
 from functools import lru_cache
 from typing import Any, Callable
 
@@ -106,6 +107,17 @@ class LLMPlayer:
         self._fallback = fallback
         self._plan: tuple[tuple, list[int]] | None = None  # (turn key, remaining guesses) for the current clue
         self.log: list[dict] = []  # every call: prompt, reply, problems (for evaluation and debugging)
+        # Set by the web API to show the player what the model is doing: progress(text, answered), where
+        # answered says a model call has come back this move (so the GPU is awake).
+        self.progress: Callable[[str, bool], None] | None = None
+        self.answered = False
+
+    def report(self, text: str) -> None:
+        if self.progress is not None:
+            try:
+                self.progress(text, self.answered)
+            except Exception:  # progress is only a nicety: never let it break a move
+                pass
 
     @property
     def fallback(self):
@@ -117,12 +129,17 @@ class LLMPlayer:
 
     def _ask(self, messages: list[dict], schema: dict, kind: str) -> dict:
         """One model call; `kind` (clue, guess or rehearsal) labels it in the log."""
+        if kind == "clue":
+            self.report("Your partner is brainstorming clue ideas…")
+        elif kind == "guess":
+            self.report("Your partner is reading your clue…")
         reply = self.backend(messages, schema=schema, thinking=self.thinking, seed=self.seed + len(self.log),
                              max_tokens=THINKING_TOKENS if self.thinking else 600)
         try:
             data = json.loads(reply["content"])
         except (json.JSONDecodeError, KeyError, TypeError):
             data = {}
+        self.answered = True
         self.log.append({"kind": kind, "messages": messages, "reply": reply, "parsed": data})
         return data
 
@@ -409,7 +426,18 @@ class SimulatingPlayer(HybridPlayer):
                     "stopped_on": outcome}
 
         pool = ThreadPoolExecutor(len(shortlist))
+        lock, done = threading.Lock(), [0]
+
+        def tested(_future) -> None:
+            with lock:
+                done[0] += 1
+                self.report(f"Your partner is testing its {len(shortlist)} clue ideas by playing your side: "
+                            f"{done[0]} of {len(shortlist)} done…")
+
+        self.report(f"Your partner is testing its {len(shortlist)} clue ideas by playing your side…")
         futures = [pool.submit(rehearse, r) for r in shortlist]
+        for future in futures:
+            future.add_done_callback(tested)
         wait(futures, timeout=self.rehearsal_timeout)
         pool.shutdown(wait=False, cancel_futures=True)  # don't wait for late rehearsals
         rehearsed = [f.result() if f.done() else {**r, "simulated": [], "run": 0, "stopped_on": "timeout"}

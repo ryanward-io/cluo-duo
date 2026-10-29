@@ -269,6 +269,21 @@ def test_simulating_player_trusts_the_rehearsal():
     assert rehearsed["BETA"]["stopped_on"] == "bystander"
 
 
+def test_rehearsals_report_progress():
+    from cluoduo.glove import GloveRankPlayer
+    from cluoduo.llm import SimulatingPlayer
+
+    v = game.view(game.new_game(seed=2, first_clue="b"), "b")
+    agents = [w for w, k in zip(v["words"], v["my_key"]) if k == "G"]
+    p = SimulatingPlayer(backend=lambda *a, **k: {"content": json.dumps({"reason": "", "guesses": [agents[0]]})},
+                         fallback=GloveRankPlayer(0))
+    seen = []
+    p.progress = lambda text, answered: seen.append((text, answered))
+    p.choose(v, [{"clue": c, "targets": agents[:1], "number": 1, "margin": 0} for c in ("ALPHA", "BETA")])
+    assert seen[0] == ("Your partner is testing its 2 clue ideas by playing your side…", False)
+    assert seen[-1] == ("Your partner is testing its 2 clue ideas by playing your side: 2 of 2 done…", True)
+
+
 def test_spelling_variants_of_board_words_are_not_clues():
     s = game.new_game(seed=1)
     s["words"][0] = "HARBOUR"

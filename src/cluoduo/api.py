@@ -34,6 +34,7 @@ class NewGame(BaseModel):
 
 # GPU-backed partners: each new game may wake a GPU, so cap them per day (UTC) to protect the credit.
 GPU_PARTNERS = {"smart": "Gemma31"}
+PROGRESS = "__progress__"  # store key prefix for a GPU partner's current step
 GPU_GAMES_PER_DAY = 40
 
 
@@ -74,13 +75,25 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None) -> FastAPI
         store.put(state)
         return game.view(state, HUMAN) | {"partner": state.get("partner", "random")}
 
+    def partner_plays(state: game.State) -> game.State:
+        player = partner_for(state)
+        if state.get("partner") not in GPU_PARTNERS:
+            return play_partner(state, AI, player)
+        # A GPU partner can take a while: it reports each step here, for GET .../progress.
+        key = PROGRESS + state["id"]
+        player.progress = lambda text, answered: store.put({"id": key, "text": text, "answered": answered})
+        try:
+            return play_partner(state, AI, player)
+        finally:
+            store.put({"id": key, "text": None, "answered": True})
+
     def move(game_id: str, fn) -> dict:
         state = load(game_id)
         try:
             state = fn(state)
         except game.RuleError as e:
             raise HTTPException(400, str(e)) from e
-        state = play_partner(state, AI, partner_for(state))
+        state = partner_plays(state)
         return respond(state)
 
     @app.get("/api/health")
@@ -118,8 +131,14 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None) -> FastAPI
                               sudden_death=body.sudden_death, turns=body.turns)
         state["partner"] = body.partner
         if body.partner_moves:
-            state = play_partner(state, AI, partner_for(state))
+            state = partner_plays(state)
         return respond(state)
+
+    @app.get("/api/games/{game_id}/progress")
+    def progress(game_id: str) -> dict:
+        """What a GPU partner is doing right now (text is None when it isn't mid-move)."""
+        record = store.get(PROGRESS + game_id) or {}
+        return {"text": record.get("text"), "answered": record.get("answered", False)}
 
     @app.post("/api/games/{game_id}/partner")
     def partner(game_id: str) -> dict:

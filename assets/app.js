@@ -164,15 +164,21 @@ async function act(path, body, thinking = "Your partner is thinking…") {
   const gpu = GPU_PARTNERS.includes(state?.partner ?? document.querySelector('input[name="partner"]:checked').value);
   const awake = Date.now() - lastGpuReply < GPU_AWAKE_MS;
   const started = Date.now();
-  // After 3 seconds, say why it's slow and count the seconds, so the player can see it's still working.
+  const before = state;
+  // A GPU partner reports each step it takes (reading the clue, brainstorming, testing clues).
+  let step = null;
+  const poll = gpu && before ? setInterval(async () => {
+    step = await call(`/api/games/${before.id}/progress`).catch(() => step);
+  }, 2000) : null;
+  // After 3 seconds, say what's happening and count the seconds, so the player can see it's still working.
   const slow = setInterval(() => {
     const secs = Math.round((Date.now() - started) / 1000);
     if (secs < 3) return;
-    renderAction(!gpu ? `${thinking} (the server may be waking up; this can take a few seconds)`
-      : awake ? `${thinking} ${secs} s`
-      : `${thinking} ${secs} s. The Advanced partner runs on its own GPU, which may be asleep: waking it can take a few minutes. Thanks for waiting.`);
+    if (!gpu) return renderAction(`${thinking} (the server may be waking up; this can take a few seconds)`);
+    const asleep = !awake && !step?.answered;
+    renderAction(`${step?.text || thinking} ${secs} s`
+      + (asleep ? ". The Advanced partner runs on its own GPU, which may be asleep: waking it can take a few minutes. Thanks for waiting." : ""));
   }, 1000);
-  const before = state;
   const gen = generation;
   let next = null;
   try {
@@ -181,6 +187,7 @@ async function act(path, body, thinking = "Your partner is thinking…") {
     if (err.unknownWord && path.endsWith("/clue")) {
       const name = PARTNERS[state.partner] || "Your partner";
       clearInterval(slow);
+      clearInterval(poll);
       busy = false;
       if (confirm(`${name} doesn't know the word ${err.unknownWord}, so it would have to guess blind. Give it anyway?`)) {
         return act(path, { ...body, anyway: true }, thinking);
@@ -192,6 +199,7 @@ async function act(path, body, thinking = "Your partner is thinking…") {
     if (!next) $("#error").textContent = err.message;
   } finally {
     clearInterval(slow);
+    clearInterval(poll);
   }
   if (next && gpu && next.history.slice(before?.history.length ?? 0).some((h) => h.side === "b")) {
     lastGpuReply = Date.now(); // only a reply with a partner move proves the GPU is awake

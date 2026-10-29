@@ -15,6 +15,7 @@ function skull(cls) {
 const PARTNERS = { random: "Random", "glove-sum": "Primitive", "glove-bayes": "Primitive + Bayesian", "glove-rank": "Basic",
   smart: "Advanced" };
 const GPU_PARTNERS = ["smart"]; // run on a GPU that may need a few minutes to wake up
+const GPU_AWAKE_MS = 4 * 60 * 1000; // the GPU sleeps 5 minutes after its last move; allow a minute's margin
 // Bystander marks: a pawn for your key, an upside-down pawn for your partner's.
 const PAWN = '<svg class="pawn" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="4" r="2.7" fill="currentColor"/><path fill="currentColor" d="M5.4 7.4h5.2l-1 4h1.9l1.2 2.9H3.3l1.2-2.9h1.9z"/></svg>';
 function pawn(cls) {
@@ -36,6 +37,7 @@ let state = null;
 let busy = false;
 let setupOpen = true;
 let generation = 0; // bumped when the player leaves a game, so late replies for it are ignored
+let lastGpuReply = 0; // when a GPU partner last answered, to tell whether its GPU is still awake
 
 function el(tag, attrs = {}, ...children) {
   const n = document.createElement(tag);
@@ -149,7 +151,6 @@ async function resync(before, err, gen) {
     const moved = s && s.history.length > before.history.length;
     if (moved && !partnersTurn(s)) return s;
     if (s && !moved && err.status >= 400 && err.status < 500) return null; // a real rule error: nothing happened
-    renderAction("Still waiting for your partner…");
     await new Promise((r) => setTimeout(r, 5000));
   }
   return null;
@@ -161,9 +162,16 @@ async function act(path, body, thinking = "Your partner is thinking…") {
   $("#error").textContent = "";
   renderAction(thinking);
   const gpu = GPU_PARTNERS.includes(state?.partner ?? document.querySelector('input[name="partner"]:checked').value);
-  const slow = setTimeout(() => renderAction(gpu
-    ? `${thinking} The Advanced partner runs on its own GPU, which can take a few minutes to wake up. Thanks for waiting.`
-    : `${thinking} (the server may be waking up; this can take a few seconds)`), 3000);
+  const awake = Date.now() - lastGpuReply < GPU_AWAKE_MS;
+  const started = Date.now();
+  // After 3 seconds, say why it's slow and count the seconds, so the player can see it's still working.
+  const slow = setInterval(() => {
+    const secs = Math.round((Date.now() - started) / 1000);
+    if (secs < 3) return;
+    renderAction(!gpu ? `${thinking} (the server may be waking up; this can take a few seconds)`
+      : awake ? `${thinking} ${secs} s`
+      : `${thinking} ${secs} s. The Advanced partner runs on its own GPU, which may be asleep: waking it can take a few minutes. Thanks for waiting.`);
+  }, 1000);
   const before = state;
   const gen = generation;
   let next = null;
@@ -172,7 +180,7 @@ async function act(path, body, thinking = "Your partner is thinking…") {
   } catch (err) {
     if (err.unknownWord && path.endsWith("/clue")) {
       const name = PARTNERS[state.partner] || "Your partner";
-      clearTimeout(slow);
+      clearInterval(slow);
       busy = false;
       if (confirm(`${name} doesn't know the word ${err.unknownWord}, so it would have to guess blind. Give it anyway?`)) {
         return act(path, { ...body, anyway: true }, thinking);
@@ -183,7 +191,10 @@ async function act(path, body, thinking = "Your partner is thinking…") {
     next = await resync(before, err, gen);
     if (!next) $("#error").textContent = err.message;
   } finally {
-    clearTimeout(slow);
+    clearInterval(slow);
+  }
+  if (next && gpu && next.history.slice(before?.history.length ?? 0).some((h) => h.side === "b")) {
+    lastGpuReply = Date.now(); // only a reply with a partner move proves the GPU is awake
   }
   if (gen !== generation) return; // the player quit while we were waiting
   if (next) {

@@ -117,6 +117,8 @@ PLAYERS = {
     "smart-gemma": _llm("smart-gemma", "SmartPlayer", server="Gemma31"),
     "smart-gemma-llmguess": _llm("smart-gemma-llmguess", "SmartPlayer", server="Gemma31", llm_guesses=True),
     "smart-gemma-noglove": _llm("smart-gemma-noglove", "SmartPlayer", server="Gemma31", llm_guesses=True, glove_vetting=False),
+    "smart-gemma-cap10": _llm("smart-gemma-cap10", "SmartPlayer", server="Gemma31", llm_guesses=True, glove_vetting=False,
+                              rehearsal_timeout=10),  # rehearsals not back within 10 s count as misses
     # ...and on gpt-oss-120b (OpenAI) and Mistral Small 3.2 24B (Mistral AI)
     "smart-gptoss": _llm("smart-gptoss", "SmartPlayer", server="GptOss"),
     "smart-gptoss-llmguess": _llm("smart-gptoss-llmguess", "SmartPlayer", server="GptOss", llm_guesses=True),

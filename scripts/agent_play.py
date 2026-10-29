@@ -162,6 +162,8 @@ def main() -> None:
             h["t"] = time.time()  # when each move was made, to time the players
         if state["phase"] != "over":
             state = partner_moves(state)
+            for h in state["history"]:
+                h.setdefault("t", time.time())  # the built-in partner's moves: when its turn ended
     state.setdefault("created", time.time())
     save(state)
     show(state, ME)

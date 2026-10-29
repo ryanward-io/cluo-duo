@@ -371,11 +371,15 @@ class SimulatingPlayer(HybridPlayer):
 
     # GloVe now only guards against assassins: the rehearsal decides how many targets the clue
     # really reaches, which GloVe judged badly for the model's knowledge-based links.
-    def __init__(self, seed: int | None = None, *, bystander_margin: float = -2.0, **kwargs):
+    # rehearsal_timeout: seconds to wait for the rehearsals. One slow rehearsal held up a whole turn
+    # (5 of 6 back within 6 s, the last at 33 s), so a rehearsal that isn't back in time counts as a miss.
+    def __init__(self, seed: int | None = None, *, bystander_margin: float = -2.0,
+                 rehearsal_timeout: float | None = None, **kwargs):
         super().__init__(seed, bystander_margin=bystander_margin, **kwargs)
+        self.rehearsal_timeout = rehearsal_timeout
 
     def choose(self, view: dict, safe: list[dict]) -> tuple[str, int]:
-        from concurrent.futures import ThreadPoolExecutor
+        from concurrent.futures import ThreadPoolExecutor, wait
 
         from .glove import open_cards
 
@@ -404,8 +408,12 @@ class SimulatingPlayer(HybridPlayer):
             return {**r, "simulated": data.get("guesses", []), "run": 0 if outcome == "assassin" else run,
                     "stopped_on": outcome}
 
-        with ThreadPoolExecutor(len(shortlist)) as pool:
-            rehearsed = list(pool.map(rehearse, shortlist))
+        pool = ThreadPoolExecutor(len(shortlist))
+        futures = [pool.submit(rehearse, r) for r in shortlist]
+        wait(futures, timeout=self.rehearsal_timeout)
+        pool.shutdown(wait=False, cancel_futures=True)  # don't wait for late rehearsals
+        rehearsed = [f.result() if f.done() else {**r, "simulated": [], "run": 0, "stopped_on": "timeout"}
+                     for f, r in zip(futures, shortlist)]
         self.log.append({"rehearsed": rehearsed})
         if not self.rehearsal_sets_number:
             # Rehearsal as a safety check only: drop clues that lead to an assassin or whose

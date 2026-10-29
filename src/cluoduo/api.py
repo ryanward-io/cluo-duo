@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
@@ -35,6 +36,8 @@ class NewGame(BaseModel):
 # GPU-backed partners: each new game may wake a GPU, so cap them per day (UTC) to protect the credit.
 GPU_PARTNERS = {"smart": "Gemma31"}
 PROGRESS = "__progress__"  # store key prefix for a GPU partner's current step
+GPU_SEEN = "__gpu_seen__"  # when the GPU partner last answered anyone
+GPU_AWAKE_SECONDS = 4 * 60  # the GPU sleeps 5 minutes after its last call; allow a minute's margin
 GPU_GAMES_PER_DAY = 40
 
 
@@ -81,11 +84,18 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None) -> FastAPI
             return play_partner(state, AI, player)
         # A GPU partner can take a while: it reports each step here, for GET .../progress.
         key = PROGRESS + state["id"]
-        player.progress = lambda text, answered: store.put({"id": key, "text": text, "answered": answered})
+        def progress(text: str, answered: bool) -> None:
+            store.put({"id": key, "text": text, "answered": answered})
+            if answered:
+                store.put({"id": GPU_SEEN, "t": time.time()})
+
+        player.progress = progress
         try:
             return play_partner(state, AI, player)
         finally:
             store.put({"id": key, "text": None, "answered": True})
+            if getattr(player, "answered", False):
+                store.put({"id": GPU_SEEN, "t": time.time()})
 
     def move(game_id: str, fn) -> dict:
         state = load(game_id)
@@ -138,7 +148,9 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None) -> FastAPI
     def progress(game_id: str) -> dict:
         """What a GPU partner is doing right now (text is None when it isn't mid-move)."""
         record = store.get(PROGRESS + game_id) or {}
-        return {"text": record.get("text"), "answered": record.get("answered", False)}
+        seen = (store.get(GPU_SEEN) or {}).get("t", 0)
+        return {"text": record.get("text"), "answered": record.get("answered", False),
+                "awake": time.time() - seen < GPU_AWAKE_SECONDS}
 
     @app.post("/api/games/{game_id}/partner")
     def partner(game_id: str) -> dict:

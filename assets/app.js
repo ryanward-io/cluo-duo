@@ -175,9 +175,10 @@ async function act(path, body, thinking = "Your partner is thinking…") {
     const secs = Math.round((Date.now() - started) / 1000);
     if (secs < 3) return;
     if (!gpu) return renderAction(`${thinking} (the server may be waking up; this can take a few seconds)`);
-    const asleep = !awake && !step?.answered;
+    // The server knows when the GPU last answered anyone; before its first reply, fall back on this browser's.
+    const asleep = step ? !step.awake && !step.answered : !awake;
     renderAction(`${step?.text || thinking} ${secs} s`
-      + (asleep ? ". The Advanced partner runs on its own GPU, which may be asleep: waking it can take a few minutes. Thanks for waiting." : ""));
+      + (asleep ? ". Its GPU has been idle, so it's probably waking up: that can take a few minutes. Thanks for waiting." : ""));
   }, 1000);
   const gen = generation;
   let next = null;

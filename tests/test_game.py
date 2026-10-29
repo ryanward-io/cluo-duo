@@ -300,6 +300,8 @@ def test_api_board_first_then_partner_clue():
     assert v["history"][0]["type"] == "clue" and v["phase"] == "guess"
     again = client.post(f"/api/games/{v['id']}/partner").json()  # the human's move now: nothing changes
     assert again["history"] == v["history"]
+    progress = client.get(f"/api/games/{v['id']}/progress").json()
+    assert progress["text"] is None and progress["awake"] is False  # no GPU partner has answered yet
 
 
 def test_api_sudden_death_guess():

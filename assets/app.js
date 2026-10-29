@@ -128,9 +128,31 @@ async function call(path, body) {
   if (!res.ok) {
     if (data.detail?.unknown_word) throw Object.assign(new Error("unknown word"), { unknownWord: data.detail.unknown_word });
     const detail = Array.isArray(data.detail) ? data.detail.map((d) => d.msg).join("; ") : data.detail;
-    throw new Error(detail || `Server error (${res.status})`);
+    throw Object.assign(new Error(detail || `Server error (${res.status})`), { status: res.status });
   }
   return data;
+}
+
+// True while the server owes the partner's move.
+function partnersTurn(s) {
+  return (s.phase === "clue" && s.giver === "b") || (s.phase === "guess" && s.clue.giver === "a")
+    || (s.phase === "sudden_death" && s.guesser === "b");
+}
+
+// A move request failed, but the server may still have made the move: a slow partner can outlast the
+// connection. Fetch the game and, if it moved on, wait for the partner to finish (up to 10 minutes).
+async function resync(before, err, gen) {
+  if (!before) return null;
+  for (let tries = 0; tries < 120; tries++) {
+    if (gen !== generation) return null;
+    const s = await call(`/api/games/${before.id}`).catch(() => null);
+    const moved = s && s.history.length > before.history.length;
+    if (moved && !partnersTurn(s)) return s;
+    if (s && !moved && err.status >= 400 && err.status < 500) return null; // a real rule error: nothing happened
+    renderAction("Still waiting for your partner…");
+    await new Promise((r) => setTimeout(r, 5000));
+  }
+  return null;
 }
 
 async function act(path, body, thinking = "Your partner is thinking…") {
@@ -158,7 +180,8 @@ async function act(path, body, thinking = "Your partner is thinking…") {
       render();
       return;
     }
-    $("#error").textContent = err.message;
+    next = await resync(before, err, gen);
+    if (!next) $("#error").textContent = err.message;
   } finally {
     clearTimeout(slow);
   }

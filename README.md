@@ -12,8 +12,7 @@ The point of the project is the AI partner: comparing word-vector and LLM partne
 |---|---|
 | Random | Random clues and guesses, as a floor. |
 | Basic | Clues and guesses from [GloVe](https://nlp.stanford.edu/projects/glove/) word vectors, with Bayesian guessing: it weighs each guess by what the board and its own key reveal, and stops when the assassin risk gets too high. |
-| Smart | Gemma 4 31B, an open model on our own GPU, playing on its own. It brainstorms clues, rehearses each one by playing the guesser, and gives the one its rehearsal reads best; it does its own guessing too. |
-| Advanced | Coming soon. |
+| Advanced | Gemma 4 31B, an open model on our own GPU, playing on its own. It brainstorms clues, rehearses each one by playing the guesser, and gives the one its rehearsal reads best; it does its own guessing too. |
 
 ## How partners are measured
 
@@ -26,15 +25,16 @@ Average agents found out of 15 with the reference player:
 | Random | 2.8 | 4 | 4 |
 | Primitive (GloVe alone; no longer offered) | 6.0 | 4 | 4 |
 | Basic | 8.2 | 2 | 4 (1 win) |
-| Smart on Qwen3.6-35B-A3B (clues only) | 8.6 | 4 | 8 |
-| Smart on Mistral Small 3.2 24B (clues only) | 8.5 | 6 | 8 |
-| Smart on Qwen3.6-27B (clues only) | 9.4 | 4 | 8 |
-| Smart on gpt-oss-120b (clues only) | 10.4 | 2 | 8 |
-| Smart on Gemma 4 31B (clues only) | 10.4 | 4 | 8 |
-| Smart on Gemma 4 31B, model also guesses | 11.0 | 1 | 8 |
-| **Smart on Gemma 4 31B, no GloVe (live)** | **13.0** | **0** | 8 (1 win) |
+| Qwen3.6-35B-A3B (clues only) | 8.6 | 4 | 8 |
+| Mistral Small 3.2 24B (clues only) | 8.5 | 6 | 8 |
+| Qwen3.6-27B (clues only) | 9.4 | 4 | 8 |
+| gpt-oss-120b (clues only) | 10.4 | 2 | 8 |
+| Gemma 4 31B (clues only) | 10.4 | 4 | 8 |
+| Gemma 4 31B, model also guesses | 11.0 | 1 | 8 |
+| Claude Sonnet, same player guide (paid API; not offered) | 11.2 | 4 | 8 (2 wins) |
+| **Advanced: Gemma 4 31B, no GloVe (live)** | **13.0** | **0** | 8 (1 win) |
 
-"Clues only" means the model gives the clues and Basic's Bayesian guesser does the guessing. In every variant but the last, GloVe also vetted the model's clues for safety. Most of the assassin losses came from GloVe misreading the reference player's clues, and dropping GloVe altogether scored higher on all 8 boards, with the first win. For comparison, the reference player paired with itself won 6 of 16 games.
+"Clues only" means the model gives the clues and Basic's Bayesian guesser does the guessing. In every variant before the live one, GloVe also vetted the model's clues for safety. Most of the assassin losses came from GloVe misreading the reference player's clues, and dropping GloVe altogether scored higher on all 8 boards, with the first win. Claude Sonnet in the partner's seat won two games outright but lost four to assassins, so Gemma at least matches it here, with no cost per game.
 
 ## How it's built
 

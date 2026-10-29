@@ -175,7 +175,6 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .partner-card:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
 .partner-card .tier { font-size: 1.25rem; font-weight: 700; line-height: 1.2; }
 .partner-card .desc { font-size: 0.82rem; line-height: 1.4; color: var(--muted); }
-.partner-card.soon { cursor: not-allowed; opacity: 0.6; border-style: dashed; }
 .badge {
   display: inline-block; vertical-align: 3px; margin-left: 4px; padding: 1px 7px; border-radius: 999px;
   font-size: 0.7rem; font-weight: 600; border: 1px solid var(--border); color: var(--muted);
@@ -228,4 +227,3 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .prose td.num, .prose th.num { text-align: right; }
 .badge.recommended { color: var(--accent); border-color: var(--accent); }
 @media (max-width: 420px) { .tabs { gap: 0; } .tabs [role="tab"] { padding: 8px 5px; font-size: 0.9rem; } }
-.badge.experimental { color: var(--warn); border-color: var(--warn); }

@@ -109,7 +109,7 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None) -> FastAPI
             raise HTTPException(400, f"Unknown partner {body.partner!r}.")
         if body.partner in GPU_PARTNERS:
             if gpu_games_today(body.partner) >= GPU_GAMES_PER_DAY:
-                raise HTTPException(429, "The Smart partner has had its games for today. Please try Basic, or come back tomorrow.")
+                raise HTTPException(429, "The Advanced partner has had its games for today. Please try Basic, or come back tomorrow.")
             gpu_games_today(body.partner, add=True)
         state = game.new_game(seed=body.seed, first_clue=HUMAN if body.first == "human" else AI,
                               sudden_death=body.sudden_death, turns=body.turns)

@@ -27,6 +27,9 @@ class NewGame(BaseModel):
     seed: int | None = Field(default=None, ge=0, lt=2**31)
     sudden_death: bool = False
     turns: int = Field(default=game.TURNS, ge=game.TURNS, le=game.TURNS + game.EXTRA_TURNS)
+    # False: return the board at once and let the client ask for the partner's first move (POST .../partner),
+    # so the player can study the board while a GPU partner wakes up.
+    partner_moves: bool = True
 
 
 # GPU-backed partners: each new game may wake a GPU, so cap them per day (UTC) to protect the credit.
@@ -114,8 +117,14 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None) -> FastAPI
         state = game.new_game(seed=body.seed, first_clue=HUMAN if body.first == "human" else AI,
                               sudden_death=body.sudden_death, turns=body.turns)
         state["partner"] = body.partner
-        state = play_partner(state, AI, partner_for(state))
+        if body.partner_moves:
+            state = play_partner(state, AI, partner_for(state))
         return respond(state)
+
+    @app.post("/api/games/{game_id}/partner")
+    def partner(game_id: str) -> dict:
+        """Let the partner make any move it owes (a no-op when it's the human's move)."""
+        return move(game_id, lambda s: s)
 
     @app.get("/api/games/{game_id}")
     def get(game_id: str) -> dict:

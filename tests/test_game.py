@@ -277,6 +277,16 @@ def test_spelling_variants_of_board_words_are_not_clues():
     assert game.spelling_variant("COLOR", "COLOUR") and not game.spelling_variant("HOUSE", "HORSE")
 
 
+def test_api_board_first_then_partner_clue():
+    client = TestClient(create_app(MemoryStore()))
+    v = client.post("/api/games", json={"first": "partner", "seed": 11, "partner_moves": False}).json()
+    assert v["phase"] == "clue" and v["giver"] == "b" and v["history"] == []
+    v = client.post(f"/api/games/{v['id']}/partner").json()
+    assert v["history"][0]["type"] == "clue" and v["phase"] == "guess"
+    again = client.post(f"/api/games/{v['id']}/partner").json()  # the human's move now: nothing changes
+    assert again["history"] == v["history"]
+
+
 def test_api_sudden_death_guess():
     store = MemoryStore()
     client = TestClient(create_app(store))

@@ -423,8 +423,14 @@ $("#start").addEventListener("click", () => {
   render();
   $("#game").hidden = false;
   const partner = document.querySelector('input[name="partner"]:checked').value;
-  act("/api/games", { first, partner, sudden_death: $("#sudden-death").checked, turns: Number($("#turn-count").value) },
-    "Setting up the board…");
+  // Show the board first, then ask for the partner's opening clue, so the player can study the
+  // board while a GPU partner wakes up.
+  act("/api/games", { first, partner, sudden_death: $("#sudden-death").checked, turns: Number($("#turn-count").value),
+    partner_moves: false }, "Setting up the board…").then(() => {
+    if (state?.phase === "clue" && state.giver === "b") {
+      act(`/api/games/${state.id}/partner`, {}, "Your partner is thinking of a clue. Take a look at the board while you wait.");
+    }
+  });
 });
 
 (async () => {

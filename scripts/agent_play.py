@@ -144,6 +144,7 @@ def main() -> None:
             print("NOT ALLOWED: it's not your move.\n")
             show(state, ME)
             return
+        before = len(state["history"])
         try:
             if args.cmd == "clue":
                 state = game.give_clue(state, ME, args.word, args.number)
@@ -157,8 +158,11 @@ def main() -> None:
                 state = game.stop(state, ME)
         except game.RuleError as e:
             print(f"NOT ALLOWED: {e}\n")
+        for h in state["history"][before:]:
+            h["t"] = time.time()  # when each move was made, to time the players
         if state["phase"] != "over":
             state = partner_moves(state)
+    state.setdefault("created", time.time())
     save(state)
     show(state, ME)
 

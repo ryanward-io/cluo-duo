@@ -133,8 +133,10 @@ class LLMPlayer:
             self.report("Your partner is brainstorming clue ideas…")
         elif kind == "guess":
             self.report("Your partner is reading your clue…")
+        # A guess reply is about 100 tokens. The cap stops one that rambles from holding up the turn:
+        # cut off, it fails to parse and counts as no guesses.
         reply = self.backend(messages, schema=schema, thinking=self.thinking, seed=self.seed + len(self.log),
-                             max_tokens=THINKING_TOKENS if self.thinking else 600)
+                             max_tokens=THINKING_TOKENS if self.thinking else 600 if kind == "clue" else 250)
         try:
             data = json.loads(reply["content"])
         except (json.JSONDecodeError, KeyError, TypeError):
@@ -290,10 +292,11 @@ class HybridPlayer(LLMPlayer):
     CANDIDATES = 8
 
     def __init__(self, seed: int | None = None, *, assassin_margin: float = 0.1,
-                 bystander_margin: float = 0.0, glove_vetting: bool = True, **kwargs):
+                 bystander_margin: float = 0.0, glove_vetting: bool = True, candidates: int = CANDIDATES, **kwargs):
         super().__init__(seed, **kwargs)
         self.assassin_margin, self.bystander_margin = assassin_margin, bystander_margin
         self.glove_vetting = glove_vetting
+        self.CANDIDATES = candidates
 
     def give_clue(self, view: dict) -> tuple[str, int]:
         agents = self._agents(view)

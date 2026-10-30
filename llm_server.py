@@ -233,6 +233,9 @@ class Gemma31(Server):
         "--gpu-memory-utilization", "0.92",
         "--max-num-seqs", "32",
         "--max-cudagraph-capture-size", "32",
+        # Compact JSON only. With whitespace allowed, a reply whose "reason" hit its length limit
+        # sometimes padded with blank lines up to max_tokens (about 30 s) instead of moving on.
+        "--structured-outputs-config", '{"backend": "xgrammar", "disable_any_whitespace": true}',
     ]
     SAMPLING = {"top_p": 0.95, "top_k": 64}  # model card
 

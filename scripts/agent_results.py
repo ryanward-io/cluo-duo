@@ -74,7 +74,8 @@ REFERENCE |= {"ref + Smart, 10 turns": (range(200, 208), "smart-t10"),
               "ref + Smart on Mistral Small 3.2 24B": (range(200, 208), "smart-mistral"),
               "ref + Smart Mistral, model also guesses": (range(200, 208), "smart-mistral-llmguess"),
               "ref + Sonnet (guide v9)": (range(200, 208), "duo-sonnet"),
-              "ref + Smart Gemma, rehearsals capped at 10 s": (range(200, 208), "smart-gemma-cap10")}
+              "ref + Smart Gemma, rehearsals capped at 10 s": (range(200, 208), "smart-gemma-cap10"),
+              "ref + Advanced: compact JSON, 6 ideas": (range(200, 208), "smart-v2")}
 
 
 def round_summary(name: str, seeds: range, tag: str = "") -> str:

@@ -177,8 +177,8 @@ async function act(path, body, thinking = "Your partner is thinking…") {
     if (!gpu) return renderAction(`${thinking} (the server may be waking up; this can take a few seconds)`);
     // The server knows when the GPU last answered anyone; before its first reply, fall back on this browser's.
     const asleep = step ? !step.awake && !step.answered : !awake;
-    renderAction(`${step?.text || thinking} ${secs} s`
-      + (asleep ? ". Its GPU has been idle, so it's probably waking up: that can take a few minutes. Thanks for waiting." : ""));
+    renderAction(`${step?.text || thinking} ${secs}\u00a0s`,
+      asleep && "Its GPU switches off when nobody's playing, so it may need a few minutes to start up again.");
   }, 1000);
   const gen = generation;
   let next = null;
@@ -347,9 +347,9 @@ function renderLog() {
   $("#log").replaceChildren(...items);
 }
 
-function renderAction(message) {
+function renderAction(message, note) {
   const box = $("#action");
-  if (message) { box.replaceChildren(el("p", {}, message)); return; }
+  if (message) { box.replaceChildren(el("p", {}, message), ...(note ? [el("p", { class: "muted" }, note)] : [])); return; }
   const s = state;
   if (s.phase === "over") {
     box.replaceChildren(

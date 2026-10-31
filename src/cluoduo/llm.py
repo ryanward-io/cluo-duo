@@ -111,6 +111,11 @@ class LLMPlayer:
         # answered says a model call has come back this move (so the GPU is awake).
         self.progress: Callable[[str, bool], None] | None = None
         self.answered = False
+        self.thoughts: list[dict] = []  # why it made each move, for the post-game log (see note)
+
+    def note(self, view: dict, thought: dict) -> None:
+        """Remember why I made a move. `at` is where the move lands in the history."""
+        self.thoughts.append({"at": len(view["history"]), **thought})
 
     def report(self, text: str) -> None:
         if self.progress is not None:
@@ -226,7 +231,10 @@ class LLMPlayer:
             if view["my_key"][i] == game.ASSASSIN and plan:
                 break  # my own assassin only ever as the first, clearest pick (lesson from the player guide)
             plan.append(i)
-        return plan[:max(clue["number"], 1)]
+        plan = plan[:max(clue["number"], 1)]
+        self.note(view, {"type": "guess", "reason": str(data.get("reason", "")),
+                         "planned": [view["words"][i] for i in plan]})
+        return plan
 
 
 def guess_messages(view: dict, clue_word: str, number: int, open_words: list[str], own_key: bool = True) -> list[dict]:
@@ -517,10 +525,18 @@ class SmartPlayer(SimulatingPlayer):
 
     def give_clue(self, view: dict) -> tuple[str, int]:
         try:
-            return super().give_clue(view)
+            clue, number = super().give_clue(view)
         except Exception as e:  # model server down, out of credit, timed out
             self.log.append({"fallback": "clue", "error": repr(e)})
+            self.note(view, {"type": "clue", "fallback": True})
             return self.fallback.give_clue(view)
+        rehearsed = next((e["rehearsed"] for e in reversed(self.log) if "rehearsed" in e), [])
+        ideas = [{"clue": r["clue"], "targets": r.get("kept", r["targets"]), "simulated": r["simulated"],
+                  "run": r["run"], "stopped_on": r["stopped_on"]} for r in rehearsed]
+        chosen = next((i for i in ideas if i["clue"] == clue), None)
+        self.note(view, {"type": "clue", "targets": chosen["targets"] if chosen else [], "ideas": ideas,
+                         "fallback": chosen is None})
+        return clue, number
 
     def next_guess(self, view: dict) -> int | None:
         if view["clue"]["word"] in self.fallback.v.index and not self.llm_guesses:

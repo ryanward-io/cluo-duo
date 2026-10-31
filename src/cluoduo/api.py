@@ -74,28 +74,40 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None) -> FastAPI
     def partner_for(state: game.State):
         return PLAYERS[state.get("partner", "random")](seed=state["seed"] + len(state["history"]))
 
+    def public(state: game.State) -> dict:
+        """The human's view. The partner's reasons for its moves would give its key away, so they wait for the end."""
+        over = state["phase"] == "over"
+        return game.view(state, HUMAN) | {"partner": state.get("partner", "random"),
+                                          "thoughts": state.get("thoughts", []) if over else None}
+
     def respond(state: game.State) -> dict:
         store.put(state)
-        return game.view(state, HUMAN) | {"partner": state.get("partner", "random")}
+        return public(state)
 
     def partner_plays(state: game.State) -> game.State:
         player = partner_for(state)
-        if state.get("partner") not in GPU_PARTNERS:
-            return play_partner(state, AI, player)
-        # A GPU partner can take a while: it reports each step here, for GET .../progress.
-        key = PROGRESS + state["id"]
-        def progress(text: str, answered: bool) -> None:
-            store.put({"id": key, "text": text, "answered": answered})
-            if answered:
-                store.put({"id": GPU_SEEN, "t": time.time()})
+        gpu = state.get("partner") in GPU_PARTNERS
+        if gpu:
+            # A GPU partner can take a while: it reports each step here, for GET .../progress.
+            key = PROGRESS + state["id"]
+            def progress(text: str, answered: bool) -> None:
+                store.put({"id": key, "text": text, "answered": answered})
+                if answered:
+                    store.put({"id": GPU_SEEN, "t": time.time()})
 
-        player.progress = progress
+            player.progress = progress
         try:
-            return play_partner(state, AI, player)
+            state = play_partner(state, AI, player)
         finally:
-            store.put({"id": key, "text": None, "answered": True})
-            if getattr(player, "answered", False):
-                store.put({"id": GPU_SEEN, "t": time.time()})
+            if gpu:
+                store.put({"id": key, "text": None, "answered": True})
+                if getattr(player, "answered", False):
+                    store.put({"id": GPU_SEEN, "t": time.time()})
+        # A clue retried after breaking a rule is noted twice: keep the last note for each move.
+        thoughts = {t["at"]: t for t in state.get("thoughts", []) + getattr(player, "thoughts", [])}
+        if thoughts:
+            state["thoughts"] = sorted(thoughts.values(), key=lambda t: t["at"])
+        return state
 
     def move(game_id: str, fn) -> dict:
         state = load(game_id)
@@ -159,8 +171,7 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None) -> FastAPI
 
     @app.get("/api/games/{game_id}")
     def get(game_id: str) -> dict:
-        state = load(game_id)
-        return game.view(state, HUMAN) | {"partner": state.get("partner", "random")}
+        return public(load(game_id))
 
     @app.post("/api/games/{game_id}/clue")
     def clue(game_id: str, body: Clue) -> dict:

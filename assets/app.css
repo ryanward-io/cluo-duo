@@ -139,6 +139,8 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .error { color: var(--error); min-height: 1.4em; margin: -6px 0 10px; }
 .log ol { margin: 8px 0 0; padding-left: 22px; }
 .log li { margin: 2px 0; }
+#thoughts { list-style: none; padding-left: 0; }
+#thoughts > li { margin: 6px 0; }
 .outcome-G { color: var(--agent); font-weight: 600; }
 .outcome-N { color: var(--mine); }
 .outcome-A { color: var(--error); font-weight: 700; }

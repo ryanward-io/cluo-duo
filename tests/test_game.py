@@ -421,3 +421,31 @@ def test_api_warns_about_clues_a_glove_partner_cannot_read():
     assert r.status_code == 409 and r.json()["detail"] == {"unknown_word": "RUDOLPH"}
     r = client.post(f"/api/games/{g['id']}/clue", json={"word": "rudolph", "number": 2, "anyway": True})
     assert r.status_code == 200
+
+
+def test_api_partner_thoughts_shown_only_after_the_game(monkeypatch):
+    from cluoduo import players
+    from cluoduo.glove import GloveRankPlayer
+    from cluoduo.llm import SmartPlayer
+
+    def fake(messages, schema, **kwargs):
+        props = schema["properties"]
+        if "candidates" in props:  # brainstorm: one idea per agent
+            agents = props["candidates"]["items"]["properties"]["targets"]["items"]["enum"]
+            return {"content": json.dumps({"candidates": [{"targets": [a], "clue": c} for a, c in zip(agents, ["OCEAN", "MUSIC"])]})}
+        words = props["guesses"]["items"]["enum"]
+        return {"content": json.dumps({"reason": "a hunch", "guesses": words[:1]})}
+
+    monkeypatch.setitem(players.PLAYERS, "smart", lambda seed=None: SmartPlayer(
+        seed, backend=fake, fallback=GloveRankPlayer(0), llm_guesses=True, glove_vetting=False))
+    store = MemoryStore()
+    client = TestClient(create_app(store))
+    v = client.post("/api/games", json={"first": "partner", "seed": 4, "partner": "smart"}).json()
+    assert v["history"][0]["type"] == "clue" and v["thoughts"] is None  # would give its key away
+    assassin = store.get(v["id"])["key"]["b"].index("A")
+    v = client.post(f"/api/games/{v['id']}/guess", json={"index": assassin}).json()
+    assert v["phase"] == "over"
+    [thought] = v["thoughts"]
+    assert thought["at"] == 0 and thought["type"] == "clue" and len(thought["ideas"]) == 2
+    chosen = next(i for i in thought["ideas"] if i["clue"] == v["history"][0]["word"])
+    assert thought["targets"] == chosen["targets"] and not thought["fallback"]

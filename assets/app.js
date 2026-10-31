@@ -272,6 +272,7 @@ function render(before = null) {
   renderBoard(before);
   renderTips();
   renderLog();
+  renderThoughts();
   renderAction();
 }
 
@@ -347,6 +348,39 @@ function renderLog() {
   $("#log").replaceChildren(...items);
 }
 
+// After the game: why the partner made each move. Only the Advanced partner explains itself.
+function renderThoughts() {
+  const box = $("#thoughts-box");
+  box.hidden = !state.thoughts?.length;
+  if (box.hidden) return;
+  const list = (words) => (words.length > 1 ? `${words.slice(0, -1).join(", ")} and ${words.at(-1)}` : words[0] ?? "");
+  const turnOf = (at) => state.history.slice(0, at + 1).filter((h) => h.type === "clue").length;
+  const test = (idea) => {
+    if (!idea.simulated.length) return idea.stopped_on === "timeout" ? "its test didn't finish in time" : "its test reply couldn't be read";
+    const guessed = `in its test it guessed ${list(idea.simulated)}: `;
+    if (idea.stopped_on === "assassin") return `${guessed}that leads to an assassin, so it was ruled out`;
+    return `${guessed}${idea.run} right${idea.stopped_on === "bystander" ? ", then a bystander" : ""}`;
+  };
+  const items = state.thoughts.map((t) => {
+    const h = state.history[t.at];
+    if (!h) return null;
+    const turn = `Turn ${turnOf(t.at)}: `;
+    if (t.type === "guess") {
+      const clue = state.history.slice(0, t.at).filter((x) => x.type === "clue").at(-1);
+      return el("li", {}, `${turn}reading your clue `, el("strong", {}, clue ? `${clue.word} ${clue.number}` : ""),
+        `, it thought: “${t.reason}”`, t.planned.length ? ` It planned to guess ${list(t.planned)}.` : "");
+    }
+    const head = [`${turn}it gave `, el("strong", {}, `${h.word} ${h.number}`)];
+    if (t.fallback || !t.targets.length) return el("li", {}, ...head, ". The model couldn't settle on a clue, so the Basic partner's logic chose this one.");
+    const short = h.number < t.targets.length ? ` When it played your side to test it, only ${h.number} came up, so it said ${h.number}.` : "";
+    return el("li", {}, ...head, `, aiming at ${list(t.targets)}.${short}`,
+      el("details", {}, el("summary", {}, `The ${t.ideas.length} clue ideas it tested`),
+        el("ul", {}, t.ideas.map((idea) => el("li", {}, el(idea.clue === h.word ? "strong" : "span", {}, idea.clue),
+          ` for ${list(idea.targets)}: ${test(idea)}`, idea.clue === h.word ? " (chosen)" : "")))));
+  });
+  $("#thoughts").replaceChildren(...items.filter(Boolean));
+}
+
 function renderAction(message, note) {
   const box = $("#action");
   if (message) { box.replaceChildren(el("p", {}, message), ...(note ? [el("p", { class: "muted" }, note)] : [])); return; }
@@ -354,7 +388,8 @@ function renderAction(message, note) {
   if (s.phase === "over") {
     box.replaceChildren(
       el("p", { class: "big-clue" }, RESULT[s.result]),
-      el("p", { class: "muted" }, "Your partner's key is now shown on the board (dashed dots)."),
+      el("p", { class: "muted" }, "Your partner's key is now shown on the board (dashed dots)."
+        + (s.thoughts?.length ? " Below the game log, you can see what your partner was thinking." : "")),
       el("div", {}, el("button", { type: "button", onclick: () => { save(null); setupOpen = true; $("#setup").hidden = false; $("#setup").scrollIntoView(); } }, "New game")));
     return;
   }

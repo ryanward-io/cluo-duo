@@ -178,7 +178,7 @@ async function act(path, body, thinking = "Your partner is thinking…") {
     // The server knows when the GPU last answered anyone; before its first reply, fall back on this browser's.
     const asleep = step ? !step.awake && !step.answered : !awake;
     renderAction(`${step?.text || thinking} ${secs}\u00a0s`,
-      asleep && "Its GPU switches off when nobody's playing, so it may need a few minutes to start up again.");
+      asleep && "The GPU switches off when nobody's playing, so it may need a few minutes to start up again.");
   }, 1000);
   const gen = generation;
   let next = null;

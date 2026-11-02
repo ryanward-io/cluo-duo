@@ -1,0 +1,428 @@
+{
+ "clue": {
+  "words": [
+   "SPIDER",
+   "BRICK",
+   "ELEPHANT",
+   "WALRUS",
+   "HELMET",
+   "DIAMOND",
+   "JAGUAR",
+   "TABLET",
+   "SHARK",
+   "MICROSCOPE",
+   "LANTERN",
+   "RACCOON",
+   "PELICAN",
+   "FEATHER",
+   "DESERT",
+   "TEMPLE",
+   "KEYBOARD",
+   "COUCH",
+   "LEMON",
+   "FOREST",
+   "DRAGON",
+   "UNIFORM",
+   "SWORD",
+   "MUSHROOM",
+   "SYRUP"
+  ],
+  "key": [
+   "G",
+   "N",
+   "A",
+   "G",
+   "A",
+   "N",
+   "N",
+   "N",
+   "N",
+   "G",
+   "N",
+   "G",
+   "G",
+   "G",
+   "G",
+   "N",
+   "G",
+   "A",
+   "N",
+   "N",
+   "N",
+   "N",
+   "G",
+   "N",
+   "N"
+  ],
+  "ideas": [
+   {
+    "clue": "ARCTIC",
+    "targets": [
+     "PELICAN",
+     "WALRUS"
+    ],
+    "guesses": null,
+    "reason": "{\"reason\": \"The clue 'ARCTIC' strongly relates to animals found in cold, polar regions. Looking at the board, 'WALRUS' is a definitive match. 'SHARK' is less likely (though some exist in cold waters, they aren't iconic 'Arctic' animals like walruses), and 'PELICAN' or 'ELEPHANT' are definitely not. However, 'SH\"",
+    "run": 0,
+    "outcome": "unreadable",
+    "seconds": 35.7,
+    "tokens": 600
+   },
+   {
+    "clue": "PEST",
+    "targets": [
+     "SPIDER",
+     "RACCOON"
+    ],
+    "guesses": [
+     "SPIDER",
+     "RACCOON"
+    ],
+    "reason": "The clue 'PEST' most strongly relates to animals often considered pests. Among the words on the board, SPIDER and RACCOON fit this description best.",
+    "run": 2,
+    "outcome": "ok",
+    "seconds": 6.5,
+    "tokens": 65
+   },
+   {
+    "clue": "WING",
+    "targets": [
+     "FEATHER",
+     "PELICAN"
+    ],
+    "guesses": [
+     "PELICAN",
+     "DRAGON"
+    ],
+    "reason": "The clue 'WING' strongly relates to animals or objects that fly. Looking at the board, PELICAN and DRAGON are the most likely candidates. FEATHER is also related, but a wing is made of feathers, whereas a pelican and dragon possess wings as a primary characteristic. Between the three, PELICAN and DR",
+    "run": 1,
+    "outcome": "bystander",
+    "seconds": 8.4,
+    "tokens": 99
+   },
+   {
+    "clue": "LABORATORY",
+    "targets": [
+     "MICROSCOPE",
+     "KEYBOARD"
+    ],
+    "guesses": [
+     "MICROSCOPE",
+     "TABLET"
+    ],
+    "reason": "MICROSCOPE is a primary piece of laboratory equipment. TABLET could refer to a lab tablet or a chemical tablet, though it is less certain. Other words like SPIDER or MUSHROOM could be studied in a lab, but MICROSCOPE is the strongest direct link.",
+    "run": 1,
+    "outcome": "bystander",
+    "seconds": 8.0,
+    "tokens": 91
+   },
+   {
+    "clue": "BLADE",
+    "targets": [
+     "SWORD",
+     "KEYBOARD"
+    ],
+    "guesses": [
+     "SWORD",
+     "DIAMOND"
+    ],
+    "reason": "The clue 'BLADE' strongly relates to 'SWORD' (the blade of a sword) and 'DIAMOND' (industrial diamond blades used for cutting). Other words like 'KEYBOARD' or 'TABLET' are less likely to be described as a 'blade' in this context.",
+    "run": 1,
+    "outcome": "bystander",
+    "seconds": 8.1,
+    "tokens": 93
+   },
+   {
+    "clue": "ARID",
+    "targets": [
+     "DESERT",
+     "SPIDER"
+    ],
+    "guesses": [
+     "DESERT"
+    ],
+    "reason": "The clue 'ARID' describes a dry climate. 'DESERT' is a direct synonym for an arid region. 'TEMPLE' can be associated with arid regions (e.g., Egyptian temples), but 'DESERT' is the strongest link. Looking for a second word, 'DIAMOND' or 'BRICK' don't fit, but 'DESERT' is the most obvious. However, '",
+    "run": 1,
+    "outcome": "ok",
+    "seconds": 9.2,
+    "tokens": 112
+   },
+   {
+    "clue": "SCIMITAR",
+    "targets": [
+     "SWORD",
+     "DESERT"
+    ],
+    "guesses": [
+     "SWORD",
+     "DRAGON"
+    ],
+    "reason": "A scimitar is a type of sword, and it is often associated with fantasy creatures like dragons in various settings. SWORD is a direct synonym/category match, and DRAGON is a strong thematic link.",
+    "run": 1,
+    "outcome": "bystander",
+    "seconds": 6.1,
+    "tokens": 59
+   },
+   {
+    "clue": "MAMMAL",
+    "targets": [
+     "RACCOON",
+     "PELICAN",
+     "WALRUS"
+    ],
+    "guesses": [
+     "ELEPHANT",
+     "JAGUAR",
+     "RACCOON"
+    ],
+    "reason": "The clue 'MAMMAL' strongly points to animals that are mammals. On the board, the clearest candidates are ELEPHANT, WALRUS, JAGUAR, and RACCOON. Since the clue number is 3, I must select the three most definitive mammals. Elephant, Jaguar, and Raccoon are classic examples, though Walrus is also one.-",
+    "run": 0,
+    "outcome": "assassin",
+    "seconds": 9.5,
+    "tokens": 117
+   }
+  ]
+ },
+ "speed": {
+  "before": [
+   8.9,
+   33.6,
+   7.4,
+   34.5,
+   7.0,
+   33.4,
+   7.0,
+   33.4,
+   33.5,
+   7.5,
+   6.7,
+   7.0,
+   34.3,
+   33.8,
+   35.7,
+   33.4,
+   6.3,
+   6.8
+  ],
+  "after": [
+   7.6,
+   5.9,
+   5.4,
+   6.2
+  ],
+  "replies": {
+   "before": [
+    {
+     "s": 6.1,
+     "tokens": 59
+    },
+    {
+     "s": 6.5,
+     "tokens": 65
+    },
+    {
+     "s": 8.0,
+     "tokens": 91
+    },
+    {
+     "s": 8.1,
+     "tokens": 93
+    },
+    {
+     "s": 9.2,
+     "tokens": 112
+    },
+    {
+     "s": 35.7,
+     "tokens": 600
+    },
+    {
+     "s": 3.7,
+     "tokens": 50
+    },
+    {
+     "s": 3.8,
+     "tokens": 53
+    },
+    {
+     "s": 3.9,
+     "tokens": 54
+    },
+    {
+     "s": 5.4,
+     "tokens": 83
+    },
+    {
+     "s": 6.0,
+     "tokens": 90
+    },
+    {
+     "s": 6.3,
+     "tokens": 96
+    },
+    {
+     "s": 6.8,
+     "tokens": 109
+    },
+    {
+     "s": 33.4,
+     "tokens": 600
+    },
+    {
+     "s": 4.2,
+     "tokens": 60
+    },
+    {
+     "s": 4.5,
+     "tokens": 68
+    },
+    {
+     "s": 5.2,
+     "tokens": 80
+    },
+    {
+     "s": 5.3,
+     "tokens": 79
+    },
+    {
+     "s": 5.6,
+     "tokens": 83
+    },
+    {
+     "s": 5.7,
+     "tokens": 85
+    },
+    {
+     "s": 6.0,
+     "tokens": 91
+    },
+    {
+     "s": 6.3,
+     "tokens": 100
+    },
+    {
+     "s": 3.2,
+     "tokens": 42
+    },
+    {
+     "s": 3.3,
+     "tokens": 43
+    },
+    {
+     "s": 3.6,
+     "tokens": 49
+    },
+    {
+     "s": 4.6,
+     "tokens": 69
+    },
+    {
+     "s": 4.6,
+     "tokens": 67
+    },
+    {
+     "s": 5.8,
+     "tokens": 91
+    },
+    {
+     "s": 6.7,
+     "tokens": 109
+    },
+    {
+     "s": 6.8,
+     "tokens": 106
+    }
+   ],
+   "after": [
+    {
+     "s": 4.4,
+     "tokens": 44
+    },
+    {
+     "s": 5.2,
+     "tokens": 56
+    },
+    {
+     "s": 7.2,
+     "tokens": 92
+    },
+    {
+     "s": 7.6,
+     "tokens": 99
+    },
+    {
+     "s": 5.0,
+     "tokens": 75
+    },
+    {
+     "s": 5.4,
+     "tokens": 85
+    },
+    {
+     "s": 5.4,
+     "tokens": 82
+    },
+    {
+     "s": 5.5,
+     "tokens": 84
+    },
+    {
+     "s": 5.9,
+     "tokens": 94
+    },
+    {
+     "s": 5.9,
+     "tokens": 96
+    },
+    {
+     "s": 3.3,
+     "tokens": 49
+    },
+    {
+     "s": 4.0,
+     "tokens": 59
+    },
+    {
+     "s": 4.1,
+     "tokens": 60
+    },
+    {
+     "s": 4.7,
+     "tokens": 70
+    },
+    {
+     "s": 5.1,
+     "tokens": 82
+    },
+    {
+     "s": 5.4,
+     "tokens": 87
+    },
+    {
+     "s": 4.3,
+     "tokens": 66
+    },
+    {
+     "s": 5.0,
+     "tokens": 79
+    },
+    {
+     "s": 5.1,
+     "tokens": 78
+    },
+    {
+     "s": 5.5,
+     "tokens": 85
+    },
+    {
+     "s": 5.6,
+     "tokens": 89
+    },
+    {
+     "s": 6.2,
+     "tokens": 101
+    }
+   ]
+  }
+ }
+}

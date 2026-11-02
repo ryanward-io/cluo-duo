@@ -15,8 +15,9 @@
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="The Cluo Duo board with the clue PEST 2, pointing at SPIDER and RACCOON">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="stylesheet" href="assets/app.css?v=202611091157">
-  <script src="assets/app.js?v=202611091157" type="module"></script>
+  <link rel="stylesheet" href="assets/app.css?v=202611091633">
+  <script src="assets/why.js?v=202611091633" type="module"></script>
+  <script src="assets/app.js?v=202611091633" type="module"></script>
 </head>
 <body>
   <header class="site">
@@ -141,7 +142,82 @@
 
     <div id="tab-why" role="tabpanel" aria-labelledby="tab-btn-why" class="panel prose" hidden>
       <h2>Why I built it</h2>
-      <p class="muted">Coming soon: how and why I built this fun little AI-powered game.</p>
+      <!-- Draft figures: keep, move or drop them as the writing needs. -->
+
+      <figure class="fig" id="fig-arch">
+        <p class="fig-title">How it fits together</p>
+        <div class="arch">
+          <div class="arch-node">
+            <h4>Your browser</h4>
+            <p class="where">ryanward.dev/cluo-duo · static files on GitHub Pages</p>
+            <ul>
+              <li>The board, menus and post-game log: plain HTML, CSS and JavaScript, no framework</li>
+              <li>Only ever sees your side of the game</li>
+            </ul>
+          </div>
+          <div class="arch-link"><span>HTTPS, JSON: new game, clue, guess · polls progress while the partner thinks</span></div>
+          <div class="arch-node modal">
+            <h4>Game server</h4>
+            <p class="where">Modal app “cluo-duo” · FastAPI on a CPU container, scales to zero</p>
+            <ul>
+              <li>The rules, as pure Python functions, shared with the test scripts</li>
+              <li>Random and Basic partners run here (GloVe vectors for 50,000 words)</li>
+              <li>Game state, progress and a daily cap on GPU games in a Modal Dict</li>
+              <li>If the GPU fails, Basic covers the move</li>
+            </ul>
+          </div>
+          <div class="arch-link"><span>Modal function call · private, no public URL</span></div>
+          <div class="arch-node modal">
+            <h4>Model server</h4>
+            <p class="where">Modal app “cluo-duo-llm” · one NVIDIA L40S GPU</p>
+            <ul>
+              <li>Gemma 4 31B (FP8) served by vLLM</li>
+              <li>Replies forced into JSON that only allows legal words</li>
+              <li>Sleeps after 5 idle minutes; at most one GPU, whatever the traffic</li>
+              <li>Weights and compiled graphs cached on Modal Volumes, so waking up takes about 3 minutes</li>
+            </ul>
+          </div>
+          <div class="arch-node arch-side">
+            <h4>Testing, off to the side</h4>
+            <p class="where">My machine · the same game code</p>
+            <ul>
+              <li>Claude Sonnet plays side A as a fixed reference player, through a command-line version of the game</li>
+              <li>Each partner version plays the same 8 boards against it</li>
+              <li>Self-play and timing probes call the same model server</li>
+            </ul>
+          </div>
+        </div>
+      </figure>
+
+      <figure class="fig" id="fig-progress">
+        <p class="fig-title">Agents found per game, with the same outside player</p>
+        <div class="chart"></div>
+        <figcaption>Average agents found out of 15, partnering Claude Sonnet (following a written player guide) on the same boards: 4 games each for the first three, 8 for the rest. Gemma alone also had no assassin losses in its 8 games.</figcaption>
+      </figure>
+
+      <figure class="fig" id="fig-models">
+        <p class="fig-title">Same design, five open models</p>
+        <div class="chart"></div>
+        <figcaption>Each model gives the clues; GloVe checks them and does the guessing; 8 games each. Bigger wasn't better: gpt-oss-120b only tied Gemma 4 31B.</figcaption>
+      </figure>
+
+      <figure class="fig" id="fig-clue">
+        <p class="fig-title">Inside one clue</p>
+        <div class="chart"></div>
+        <figcaption>A real turn from a test game, before the speed fix. Gemma gave PEST 2.</figcaption>
+      </figure>
+
+      <figure class="fig" id="fig-speed">
+        <p class="fig-title">How long testing the clue ideas took</p>
+        <div class="chart strip"></div>
+        <figcaption>One dot per clue turn. Before the fix, half the turns waited about 25 seconds longer, because one test reply padded itself with blank space up to the 600-token limit. Allowing only compact JSON fixed it.</figcaption>
+      </figure>
+
+      <figure class="fig" id="fig-cost">
+        <p class="fig-title">Rough cost per game</p>
+        <div class="chart"></div>
+        <figcaption>Estimates, not bills. The GPU is paid by the hour whether or not it's busy, so it gets cheaper per game when several people play at once; the Claude models are paid per word. Opus and DeepSeek weren't tested as partners.</figcaption>
+      </figure>
     </div>
   </main>
 

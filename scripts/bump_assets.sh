@@ -4,5 +4,5 @@
 set -e
 cd "$(dirname "$0")/.."
 v=$(date +%Y%m%d%H%M)
-sed -i -E "s/(app\.(css|js))\?v=[^\"]*/\1?v=$v/" index.html
+sed -i -E "s/((app|why)\.(css|js|json))\?v=[^\"]*/\1?v=$v/" index.html
 echo "assets stamped v=$v"

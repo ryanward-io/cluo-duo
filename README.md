@@ -4,7 +4,7 @@ A free online co-operative word game in the Duet style, played with an AI partne
 
 **Play:** https://ryanward.dev/cluo-duo/
 
-The point of the project is the AI partner: comparing word-vector and LLM partners and measuring how well each one plays with someone it has never played with before.
+The point of the project is the AI partner: comparing word-vector and LLM partners and measuring how well each one plays with someone it has never played with before. With a fixed reference player, the live partner (the open model Gemma 4) finds 11.2 of 15 agents on average, compared with 9.0 for GloVe word vectors and 11.2 for Claude Sonnet in the same seat, and it lost one game to an assassin to Sonnet's four.
 
 ## Partners
 
@@ -12,19 +12,19 @@ The point of the project is the AI partner: comparing word-vector and LLM partne
 |---|---|
 | Random | Random clues and guesses, as a floor. |
 | Basic | Clues and guesses from [GloVe](https://nlp.stanford.edu/projects/glove/) word vectors, with Bayesian guessing: it weighs each guess by what the board and its own key reveal, and stops when the assassin risk gets too high. |
-| Advanced | Gemma 4 31B, an open model on our own GPU, playing on its own. It brainstorms clues, rehearses each one by playing the guesser, and gives the one its rehearsal reads best; it does its own guessing too. |
+| Advanced | Google's Gemma 4 31B-it (Apache 2.0), as Red Hat AI's FP8 quantisation, served with vLLM on a GPU of mine. It brainstorms clues, rehearses each one by playing the guesser, and gives the one its rehearsal reads best. It does its own guessing too, without GloVe. |
 
 ## How partners are measured
 
-Self-play (a partner playing a copy of itself) is cheap but flattering, because the two copies share a private language. The real test pairs each partner with a fixed reference player (Claude Sonnet, following the player guide in `prompts/player.md`) on the same boards (seeds 200 to 207).
+Self-play (a partner playing a copy of itself) is cheap but flattering, because the two copies share a private language. The real test pairs each partner with a fixed reference player (Claude Sonnet, following the player guide in `prompts/player.md`) on the same 8 boards (seeds 200 to 207).
 
-Average agents found out of 15 with the reference player:
+Average agents found out of 15 with the reference player, measured 27 Oct to 9 Nov 2026:
 
 | Partner | Avg found | Assassin losses | Games |
 |---|---|---|---|
-| Random | 2.8 | 4 | 4 |
-| Primitive (GloVe alone; no longer offered) | 6.0 | 4 | 4 |
-| Basic | 8.2 | 2 | 4 (1 win) |
+| Random | 2.8 | 7 | 8 |
+| Primitive (GloVe alone; no longer offered) | 6.0 | 4 | 4 (boards 200 to 203 only) |
+| Basic | 9.0 | 5 | 8 (1 win) |
 | Qwen3.6-35B-A3B (clues only) | 8.6 | 4 | 8 |
 | Mistral Small 3.2 24B (clues only) | 8.5 | 6 | 8 |
 | Qwen3.6-27B (clues only) | 9.4 | 4 | 8 |
@@ -32,9 +32,16 @@ Average agents found out of 15 with the reference player:
 | Gemma 4 31B (clues only) | 10.4 | 4 | 8 |
 | Gemma 4 31B, model also guesses | 11.0 | 1 | 8 |
 | Claude Sonnet, same player guide (paid API; not offered) | 11.2 | 4 | 8 (2 wins) |
-| **Advanced: Gemma 4 31B, no GloVe (live)** | **13.0** | **0** | 8 (1 win) |
+| Gemma 4 31B, no GloVe (28 Oct version) | 13.0 | 0 | 8 (1 win) |
+| **Advanced (live since 31 Oct): Gemma 4 31B, no GloVe, compact replies** | **11.2** | **1** | 8 |
 
-"Clues only" means the model gives the clues and Basic's Bayesian guesser does the guessing. In every variant before the live one, GloVe also vetted the model's clues for safety. Most of the assassin losses came from GloVe misreading the reference player's clues, and dropping GloVe altogether scored higher on all 8 boards, with the first win. Claude Sonnet in the partner's seat won two games outright but lost four to assassins, so Gemma at least matches it here, with no cost per game.
+"Clues only" means the model gives the clues and Basic's Bayesian guesser does the guessing. In those variants GloVe also vetted the model's clues for safety. Most of their assassin losses came from GloVe misreading the reference player's clues, and dropping GloVe altogether scored higher on all 8 boards (sign test p ≈ 0.008), with the first win.
+
+The live partner differs from the 28 Oct version in two ways that stopped occasional 30-second stalls: replies are compact JSON, and guess replies are capped at 250 tokens. It scored lower on 7 of the 8 boards (p ≈ 0.07), so the speed fix probably cost some strength. The two versions were also played by different reference-player sessions, which adds noise.
+
+Against Claude Sonnet in the partner's seat, the live partner scored the same on average (higher on 3 boards, lower on 4, p = 1). Sonnet won two games outright but lost four to assassins, so Gemma is comparable here, with no cost per game.
+
+These are small samples: 8 games per row (4 for Primitive), so differences under about 1.5 agents don't mean much. The games behind the table are in `data/agent-games/`; `uv run python scripts/agent_results.py --rounds` recomputes it.
 
 ## How it's built
 
@@ -50,6 +57,14 @@ Average agents found out of 15 with the reference player:
 
 ## Running locally
 
+The GloVe partners need word vectors, which aren't in the repo (the source file is 5 GB):
+
+1. Download `glove.42B.300d.zip` from the [GloVe page](https://nlp.stanford.edu/projects/glove/) and unzip it.
+2. Save the public-domain [ENABLE word list](https://github.com/dolph/dictionary/blob/master/enable1.txt) as `data/raw/enable1.txt`.
+3. Run `uv run python scripts/prepare_vectors.py path/to/glove.42B.300d.txt`. This writes `data/glove50k.npz`: the 50,000 most common real words, as float16.
+
+Then:
+
 ```sh
 uv sync
 uv run pytest
@@ -59,6 +74,12 @@ python3 -m http.server 8010           # page on http://localhost:8010/?api=http:
 
 Deploy the API with `uv run modal deploy modal_app.py` and the model servers with `uv run modal deploy llm_server.py`.
 
+To replay a reference game, start it with `uv run python scripts/agent_play.py new --seed 200 --partner smart --tag mytest`, then have the reference player (a Claude Sonnet session given `prompts/player.md`) play side `a` using only the `show`, `clue`, `guess` and `stop` commands that script prints. It must never read the game file, which holds both keys.
+
 ## Licence
 
-MIT for the code. A game in the Duet style; not affiliated with Codenames or Czech Games Edition. The word list is our own.
+MIT for the code. A game in the Duet style; not affiliated with Codenames or Czech Games Edition. The 354 board words are my own list.
+
+- Word vectors: [GloVe](https://nlp.stanford.edu/projects/glove/) 42B (Common Crawl), by Jeffrey Pennington, Richard Socher and Christopher D. Manning (2014), released under the Public Domain Dedication and License.
+- Vocabulary filter: the public-domain ENABLE word list.
+- Advanced partner: Google's Gemma 4 31B-it (Apache 2.0), via Red Hat AI's FP8 quantisation.

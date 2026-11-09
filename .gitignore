@@ -2,7 +2,9 @@
 __pycache__/
 *.pyc
 .pytest_cache/
-data/
+# Word vectors and model caches stay local; the reference games are published so the results can be checked.
+data/*
+!data/agent-games/
 
 # Local secrets: never committed
 *.env

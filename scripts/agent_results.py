@@ -56,11 +56,14 @@ ROUNDS = {
 REPLAYS = {"v9 replayed on v10's boards (Sonnet)": (range(144, 152), "v9")}
 # Reference-partner test: Sonnet + guide v9 on side a, each AI tier on side b, same boards.
 REFERENCE = {tier: (range(200, 204), tag) for tier, tag in
-             [("ref + Random", "random"), ("ref + Primitive", "glove-sum"), ("ref + Basic", "glove-rank"),
-              ("ref + Smart (Qwen)", "qwen36-sim"), ("ref + Basic, capped at 3, no leftovers", "glove-rank-safe"),
+             [("ref + Random", "random"), ("ref + Primitive", "glove-sum"), ("ref + Basic (pre-27 Oct defaults)", "glove-rank"),
+              ("ref + Smart (Qwen)", "qwen36-sim"), ("ref + Basic (live defaults: capped at 3, no leftovers)", "glove-rank-safe"),
               ("ref + Smart, GloVe vets later guesses", "qwen36-sim-cautious"),
               ("ref + Smart: Qwen clues, Bayesian guesses", "smart")]}
 REFERENCE["ref + Smart: Qwen clues, Bayesian guesses"] = (range(200, 208), "smart")
+# Boards 204-207 added 9 Nov 2026, so these rows cover the same 8 boards as the rest.
+REFERENCE["ref + Random"] = (range(200, 208), "random")
+REFERENCE["ref + Basic (live defaults: capped at 3, no leftovers)"] = (range(200, 208), "glove-rank-safe")
 REFERENCE |= {"ref + Smart, 10 turns": (range(200, 208), "smart-t10"),
               "ref + Basic (capped), 10 turns": (range(200, 204), "glove-rank-t10"),
               "ref + Smart, full clue numbers": (range(200, 208), "smart-full"),
@@ -76,7 +79,7 @@ REFERENCE |= {"ref + Smart, 10 turns": (range(200, 208), "smart-t10"),
               "ref + Sonnet (guide v9)": (range(200, 208), "duo-sonnet"),
               "ref + Smart Gemma, rehearsals capped at 10 s": (range(200, 208), "smart-gemma-cap10"),
               "ref + Advanced: compact JSON, 6 ideas": (range(200, 208), "smart-v2"),
-              "ref + Advanced: compact JSON, 8 ideas": (range(200, 208), "smart-v3")}
+              "ref + Advanced (live since 31 Oct): compact JSON, 8 ideas": (range(200, 208), "smart-v3")}
 
 
 def round_summary(name: str, seeds: range, tag: str = "") -> str:

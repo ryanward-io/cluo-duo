@@ -451,3 +451,8 @@ def test_api_partner_thoughts_shown_only_after_the_game(monkeypatch):
     assert thought["at"] == 0 and thought["type"] == "clue" and len(thought["ideas"]) == 2
     chosen = next(i for i in thought["ideas"] if i["clue"] == v["history"][0]["word"])
     assert thought["targets"] == chosen["targets"] and not thought["fallback"]
+
+
+def test_unseeded_games_use_a_seed_too_big_to_search():
+    seeds = {game.new_game()["seed"] for _ in range(5)}
+    assert len(seeds) == 5 and max(seeds) > 2**64

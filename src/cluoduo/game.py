@@ -68,7 +68,9 @@ def new_game(seed: int | None = None, first_clue: Side = "a", game_id: str | Non
              sudden_death: bool = False, turns: int = TURNS) -> State:
     if not TURNS <= turns <= TURNS + EXTRA_TURNS:
         raise RuleError(f"Turns must be between {TURNS} and {TURNS + EXTRA_TURNS}.")
-    seed = secrets.randbelow(2**31) if seed is None else seed
+    # 256 random bits: a 31-bit seed could be found by trying them all against the board words,
+    # which would give the partner's key away. Fixed seeds stay for tests and evaluation boards.
+    seed = secrets.randbits(256) if seed is None else seed
     rng = random.Random(seed)
     words = rng.sample(WORDS, BOARD_SIZE)
     pairs = [pair for pair, count in KEY_LAYOUT.items() for _ in range(count)]

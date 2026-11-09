@@ -84,7 +84,8 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None) -> FastAPI
         return state
 
     def partner_for(state: game.State):
-        return PLAYERS[state.get("partner", "random")](seed=state["seed"] + len(state["history"]))
+        # The model server takes a small seed; the low bits say nothing useful about the board.
+        return PLAYERS[state.get("partner", "random")](seed=state["seed"] % 2**31 + len(state["history"]))
 
     def public(state: game.State) -> dict:
         """The human's view. The partner's reasons for its moves would give its key away, so they wait for the end."""

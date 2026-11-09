@@ -39,7 +39,7 @@ Average agents found out of 15 with the reference player, measured 27 Oct to 9 N
 
 The live partner differs from the 28 Oct version in two ways that stopped occasional 30-second stalls: replies are compact JSON, and guess replies are capped at 250 tokens. It scored lower on 7 of the 8 boards (p ≈ 0.07), so the speed fix probably cost some strength. The two versions were also played by different reference-player sessions, which adds noise.
 
-Against Claude Sonnet in the partner's seat, the live partner scored the same on average (higher on 3 boards, lower on 4, p = 1). Sonnet won two games outright but lost four to assassins, so Gemma is comparable here, with no cost per game.
+Against Claude Sonnet in the partner's seat, the live partner scored the same on average (higher on 3 boards, lower on 4, p = 1). Sonnet won two games outright but lost four to assassins, so Gemma is comparable here. Gemma isn't free: the GPU is billed by the hour, about $0.60 for one player's session (Modal bill, 30 Oct 2026), less per game when games run back to back.
 
 These are small samples: 8 games per row (4 for Primitive), so differences under about 1.5 agents don't mean much. The games behind the table are in `data/agent-games/`; `uv run python scripts/agent_results.py --rounds` recomputes it.
 

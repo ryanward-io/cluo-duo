@@ -260,7 +260,10 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 /* ---------- "Why I built it" figures (assets/why.js) ---------- */
 .fig { margin: 20px 0 24px; }
 .fig figcaption { color: var(--muted); font-size: 0.88rem; margin-top: 8px; line-height: 1.45; }
-.fig-title { font-weight: 700; margin: 0 0 8px; }
+.fig-title { font-size: 1rem; font-weight: 700; margin: 0 0 8px; }
+.fig-stat { font-size: 0.92rem; margin: 0 0 10px; }
+.fig-stat strong { font-size: 1.25rem; }
+.fig-error { color: var(--muted); font-style: italic; }
 .fig details { margin-top: 6px; font-size: 0.88rem; }
 .fig details summary { cursor: pointer; color: var(--accent); }
 
@@ -274,7 +277,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .arch-node.modal { border-color: var(--accent); }
 .arch-link { display: flex; align-items: center; gap: 10px; padding: 2px 0 2px 22px; min-height: 44px; color: var(--muted); font-size: 0.82rem; }
 .arch-link::before { content: ""; align-self: stretch; width: 0; border-left: 2px solid var(--accent); margin-right: 2px; }
-.arch-link span::before { content: "↓ "; color: var(--accent); font-weight: 700; }
+.arch-link span::before { content: "↓ " / ""; color: var(--accent); font-weight: 700; }
 .arch-group { border: 1px dashed transparent; }
 .arch-side { margin-top: 14px; }
 
@@ -283,32 +286,33 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .bars .label { line-height: 1.25; }
 .bars .label small { display: block; color: var(--muted); }
 .bars .track { position: relative; height: 14px; }
-.bars .bar { position: absolute; top: 0; bottom: 0; left: 0; background: var(--muted); opacity: 0.55; border-radius: 0 4px 4px 0; }
+.bars .bar { position: absolute; top: 0; bottom: 0; left: 0; background: var(--muted); opacity: 0.8; border-radius: 0 4px 4px 0; }
 .bars .bar.range { border-radius: 4px; }
 .bars .hi .bar { background: var(--accent); opacity: 1; }
 .bars .value { font-variant-numeric: tabular-nums; text-align: right; min-width: 3.2rem; }
 .bars .hi { font-weight: 700; }
 .bars .sep { grid-column: 1 / -1; border-top: 1px solid var(--border); margin: 4px 0; }
-.bars .axis { grid-column: 2; display: flex; justify-content: space-between; color: var(--muted); font-size: 0.75rem; border-top: 1px solid var(--border); padding-top: 2px; }
+.bars .axis { grid-column: 2; position: relative; height: 1.3em; color: var(--muted); font-size: 0.75rem; border-top: 1px solid var(--border); }
+.bars .axis span { position: absolute; top: 2px; transform: translateX(-50%); white-space: nowrap; }
+.bars .axis span:first-child { transform: none; }
+.bars .axis span:last-child { transform: translateX(-100%); }
 .bars .row { display: contents; }
-.bars .row:hover .label, .bars .row:focus-within .label { color: var(--accent); }
 @media (max-width: 520px) {
   /* Labels go above their bars, so the bars keep the full width. */
   .bars { grid-template-columns: minmax(0, 1fr) auto; row-gap: 2px; }
   .bars .label { grid-column: 1 / -1; margin-top: 6px; }
   .bars .axis { grid-column: 1; }
   .bars .axis-pad { display: none; }
-  .mini-board span { font-size: 0.55rem; letter-spacing: 0; padding: 11px 1px 5px; }
 }
 
 /* One clue, step by step */
 .steps { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; }
 .steps button { padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 0.85rem; cursor: pointer; }
-.steps button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.steps button[aria-current="step"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 .clue-walk { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 14px; align-items: start; }
 @media (max-width: 680px) { .clue-walk { grid-template-columns: 1fr; } }
-.mini-board { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; }
-.mini-board span { position: relative; background: var(--card); color: var(--card-text); border-radius: 5px; padding: 12px 2px 6px; text-align: center; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; overflow: hidden; text-overflow: ellipsis; outline: 2px solid transparent; outline-offset: -2px; }
+.mini-board { container-type: inline-size; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; }
+.mini-board span { position: relative; background: var(--card); color: var(--card-text); border-radius: 5px; padding: 12px 2px 6px; text-align: center; font-size: min(0.62rem, 2.25cqi); font-weight: 700; white-space: nowrap; overflow: hidden; outline: 2px solid transparent; outline-offset: -2px; }
 .mini-board span::before { content: ""; position: absolute; top: 3px; left: 4px; width: 7px; height: 7px; border-radius: 50%; }
 .mini-board .G::before { background: var(--agent); }
 .mini-board .A::before { background: var(--assassin); border-radius: 1px; }
@@ -321,16 +325,25 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .ideas .clueword { font-weight: 700; }
 .ideas .detail { display: block; color: var(--muted); font-size: 0.8rem; }
 .ideas .chosen { color: var(--agent); font-weight: 700; }
-.ideas .out { opacity: 0.6; }
-.walk-note { font-size: 0.88rem; margin: 10px 0 0; }
+.ideas .out { border-style: dashed; }
+.ideas .out .clueword { font-weight: 400; }
+.walk-note { font-size: 0.88rem; margin: 0 0 10px; min-height: 4.2em; }
 .walk-reason { font-size: 0.82rem; color: var(--muted); margin: 6px 0 0; font-style: italic; }
 
 /* Speed strip plot */
 .strip svg { width: 100%; height: auto; display: block; overflow: visible; }
 .strip .grid { stroke: var(--border); stroke-width: 1; }
-.strip .tick { fill: var(--muted); font-size: 11px; }
-.strip .rowlabel { fill: var(--text); font-size: 12px; font-weight: 600; }
+.strip .tick { fill: var(--muted); font-size: 12px; }
+.strip .rowlabel { fill: var(--text); font-size: 13px; font-weight: 600; }
 .strip .dot { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
 .strip .dot.slow { fill: var(--warn); }
-.strip .note { fill: var(--muted); font-size: 11px; }
-.chart-tip { position: fixed; pointer-events: none; background: var(--text); color: var(--bg); font-size: 0.8rem; padding: 4px 8px; border-radius: 6px; z-index: 10; }
+.strip .note { fill: var(--muted); font-size: 12px; }
+
+@media (forced-colors: active) {
+  /* Keep the figures' bars, marks and selected states visible in high-contrast modes. */
+  .bars .bar, .mini-board span::before, .strip .dot { forced-color-adjust: none; background: CanvasText; fill: CanvasText; opacity: 1; }
+  .bars .hi .bar, .strip .dot.slow { background: Highlight; fill: Highlight; }
+  .steps button[aria-current="step"], .ideas button[aria-pressed="true"] { border: 3px solid Highlight; }
+  .mini-board .target { outline-color: Highlight; }
+  .mini-board .guessed { box-shadow: none; text-decoration: underline 3px; }
+}

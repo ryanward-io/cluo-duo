@@ -15,9 +15,9 @@
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="The Cluo Duo board with the clue PEST 2, pointing at SPIDER and RACCOON">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="stylesheet" href="assets/app.css?v=202611091634">
-  <script src="assets/why.js?v=202611091634" type="module"></script>
-  <script src="assets/app.js?v=202611091634" type="module"></script>
+  <link rel="stylesheet" href="assets/app.css?v=202611092124">
+  <script src="assets/why.js?v=202611092124" type="module"></script>
+  <script src="assets/app.js?v=202611092124" type="module"></script>
 </head>
 <body>
   <header class="site">
@@ -144,8 +144,45 @@
       <h2>Why I built it</h2>
       <!-- Draft figures: keep, move or drop them as the writing needs. -->
 
+      <figure class="fig" id="fig-progress">
+        <h3 class="fig-title">The live partner finds 11.2 of 15 agents, level with Claude Sonnet</h3>
+        <div class="chart"></div>
+        <figcaption>Average agents found out of 15, partnering Claude Sonnet (following a written player guide) on the same 8 boards, 27 Oct–9 Nov 2026. Partners are in the order I built them; these are selected milestones. GloVe word vectors played only the first 4 boards. The 28 Oct version had no assassin losses in its 8 games. The live version added a fix for occasional 30-second stalls and scored lower on 7 of the 8 boards; the two were also played by different reference-player sessions. With 8 games each, gaps under about 1.5 agents don't mean much.</figcaption>
+      </figure>
+
+      <figure class="fig" id="fig-clue">
+        <h3 class="fig-title">Gemma tests every clue idea on itself before giving one</h3>
+        <div class="chart"></div>
+        <figcaption>A real turn from a test game, before the speed fix. Gemma gave PEST 2.</figcaption>
+      </figure>
+
+      <figure class="fig" id="fig-models">
+        <h3 class="fig-title">Bigger wasn't better: Gemma 4 31B tied a 120B model</h3>
+        <div class="chart"></div>
+        <figcaption>Each model gives the clues; GloVe checks them and does the guessing; 8 games each, late Oct 2026. gpt-oss-120b tied Gemma 4 31B on agents found and lost fewer games to assassins (2 against 4), but only about 5B of its 120B parameters are active for each word, and a tie this close is within the noise.</figcaption>
+      </figure>
+
+      <figure class="fig" id="fig-games">
+        <h3 class="fig-title">About 18,000 games, almost all quick self-play</h3>
+        <p class="fig-stat"><strong class="stat-glove">about 17,000</strong> games of GloVe partners playing themselves on a CPU, to tune Basic. The slower games below needed the GPU or Claude:</p>
+        <div class="chart"></div>
+        <figcaption>Self-play pits two copies of a partner against each other. It's fast, but the copies share a private language, so it flatters them. The reference games, with Claude Sonnet as an outside player, are the real test behind the results above. Reference and two-AI counts come from the saved games; self-play counts are rebuilt from my session logs, because those scripts printed their results without saving them.</figcaption>
+      </figure>
+
+      <figure class="fig" id="fig-speed">
+        <h3 class="fig-title">One runaway reply stalled half the turns by 25 seconds</h3>
+        <div class="chart strip"></div>
+        <figcaption>One dot per clue turn, from a test version that brainstormed 6 ideas (the live one does 8). Before the fix, half the turns waited about 25 seconds longer, because one test reply padded itself with blank space up to the 600-token limit. The fix allows only compact JSON and caps each test reply at 250 tokens. "After" is only 4 turns, and the fix seems to have cost some strength (13.0 agents found before, 11.2 after).</figcaption>
+      </figure>
+
+      <figure class="fig" id="fig-cost">
+        <h3 class="fig-title">A lone player on the GPU costs more than Claude Sonnet would</h3>
+        <div class="chart"></div>
+        <figcaption>US$ per game, Nov 2026 prices. GPU, from Modal's bill: one player's session on 30 Oct cost $0.58 (waking up, the game, then 5 idle minutes); 8 test games played back to back cost $2.17 in all. The GPU is paid by the second while awake, busy or not, so it gets cheaper per game when people play one after another. Claude figures are rough estimates from token use; Opus was only tried playing itself, on 2 boards. DeepSeek wasn't tested.</figcaption>
+      </figure>
+
       <figure class="fig" id="fig-arch">
-        <p class="fig-title">How it fits together</p>
+        <h3 class="fig-title">How it fits together</h3>
         <div class="arch">
           <div class="arch-node">
             <h4>Your browser</h4>
@@ -172,9 +209,9 @@
             <p class="where">Modal app “cluo-duo-llm” · one NVIDIA L40S GPU</p>
             <ul>
               <li>Gemma 4 31B (FP8) served by vLLM</li>
-              <li>Replies forced into JSON that only allows legal words</li>
+              <li>Replies forced into JSON: the words it targets or guesses must be on the board; clues are checked against the rules afterwards</li>
               <li>Sleeps after 5 idle minutes; at most one GPU, whatever the traffic</li>
-              <li>Weights, compiled graphs and kernels cached on Modal Volumes, so waking up takes about 2 minutes</li>
+              <li>Weights, compiled graphs and kernels cached on Modal Volumes, so waking up takes about 2 minutes (1 min 52 s when last timed, 9 Nov)</li>
             </ul>
           </div>
           <div class="arch-node arch-side">
@@ -182,48 +219,13 @@
             <p class="where">My machine · the same game code</p>
             <ul>
               <li>Claude Sonnet plays side A as a fixed reference player, through a command-line version of the game</li>
-              <li>Each partner version plays the same 8 boards against it</li>
+              <li>Each partner version plays the same 8 boards against it (a few early ones, the first 4)</li>
               <li>Self-play and timing probes call the same model server</li>
             </ul>
           </div>
         </div>
       </figure>
 
-      <figure class="fig" id="fig-games">
-        <p class="fig-title">About 18,000 games played to build and test it</p>
-        <div class="chart"></div>
-        <figcaption>Self-play pits two copies of a partner against each other: thousands of games run in minutes on a CPU, but the copies share a private language, so it flatters them. Each LLM game needs the GPU, so those runs were kept to 20 games per version. The reference games, with Claude Sonnet as an outside player, are the real test behind the results below. Self-play counts are rebuilt from my session logs, so they're a minimum.</figcaption>
-      </figure>
-
-      <figure class="fig" id="fig-progress">
-        <p class="fig-title">Agents found per game, with the same outside player</p>
-        <div class="chart"></div>
-        <figcaption>Average agents found out of 15, partnering Claude Sonnet (following a written player guide) on the same 8 boards; GloVe word vectors played only the first 4. The 28 Oct version had no assassin losses in its 8 games. The live version added a fix for occasional 30-second stalls, and scored lower on 7 of the 8 boards. With 8 games each, gaps under about 1.5 agents don't mean much.</figcaption>
-      </figure>
-
-      <figure class="fig" id="fig-models">
-        <p class="fig-title">Same design, five open models</p>
-        <div class="chart"></div>
-        <figcaption>Each model gives the clues; GloVe checks them and does the guessing; 8 games each. Bigger wasn't better: gpt-oss-120b only tied Gemma 4 31B.</figcaption>
-      </figure>
-
-      <figure class="fig" id="fig-clue">
-        <p class="fig-title">Inside one clue</p>
-        <div class="chart"></div>
-        <figcaption>A real turn from a test game, before the speed fix. Gemma gave PEST 2.</figcaption>
-      </figure>
-
-      <figure class="fig" id="fig-speed">
-        <p class="fig-title">How long testing the clue ideas took</p>
-        <div class="chart strip"></div>
-        <figcaption>One dot per clue turn. Before the fix, half the turns waited about 25 seconds longer, because one test reply padded itself with blank space up to the 600-token limit. Allowing only compact JSON fixed it.</figcaption>
-      </figure>
-
-      <figure class="fig" id="fig-cost">
-        <p class="fig-title">Rough cost per game</p>
-        <div class="chart"></div>
-        <figcaption>Estimates, not bills. The GPU is paid by the hour whether or not it's busy, so it gets cheaper per game when several people play at once; the Claude models are paid per word. Opus and DeepSeek weren't tested as partners.</figcaption>
-      </figure>
     </div>
   </main>
 

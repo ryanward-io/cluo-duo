@@ -49,8 +49,7 @@ const PROGRESS = [
   { label: "Qwen 3.6 35B-A3B gives clues", note: "GloVe checks them and guesses", value: 8.6, text: "8.6" },
   { label: "Gemma 4 31B gives clues", note: "same setup, better model", value: 10.4, text: "10.4" },
   { label: "Gemma guesses too", value: 11.0, text: "11.0" },
-  { label: "Gemma alone, 28 Oct", note: "no GloVe; tests every clue idea", value: 13.0, text: "13.0" },
-  { label: "Advanced (live)", note: "the same, with the speed fix", value: 11.2, text: "11.2", hi: true },
+  { label: "Gemma alone (live Advanced)", note: "no GloVe; tests every clue idea", value: 11.2, text: "11.2", hi: true },
   "sep",
   { label: "Claude Sonnet as partner", note: "paid API; for comparison", value: 11.2, text: "11.2" },
 ];

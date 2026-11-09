@@ -64,13 +64,13 @@ const MODELS = [
 ];
 
 // Games played while building and testing. Reference and two-agent games are counted from
-// data/agent-games (boards 200-207: 160 reference, 4 Opus self-play). Self-play counts are rebuilt
+// data/agent-games (boards 200-207: 208 reference incl. the 10 Nov rerun, 4 Opus self-play). Self-play counts are rebuilt
 // from session logs: evaluate.py and compare.py print their results and never saved them.
 const SELF_PLAY_GLOVE = "about 17,000";
 const GAMES = [
   { label: "Self-play, LLM partners", note: "20 games per version, on the GPU", value: 400, text: "about 400" },
   { label: "Two AI players", note: "refining the player guide", value: 172, text: "172" },
-  { label: "Reference player + partner", note: "the games behind the results", value: 160, text: "160", hi: true },
+  { label: "Reference player + partner", note: "the games behind the results", value: 208, text: "208", hi: true },
 ];
 
 // US$ per game. GPU: Modal's bill (see the caption). Claude: rough estimates from token use, not bills.

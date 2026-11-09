@@ -15,9 +15,9 @@
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="The Cluo Duo board with the clue PEST 2, pointing at SPIDER and RACCOON">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="stylesheet" href="assets/app.css?v=202611092124">
-  <script src="assets/why.js?v=202611092124" type="module"></script>
-  <script src="assets/app.js?v=202611092124" type="module"></script>
+  <link rel="stylesheet" href="assets/app.css?v=202611101008">
+  <script src="assets/why.js?v=202611101008" type="module"></script>
+  <script src="assets/app.js?v=202611101008" type="module"></script>
 </head>
 <body>
   <header class="site">
@@ -147,7 +147,7 @@
       <figure class="fig" id="fig-progress">
         <h3 class="fig-title">The live partner finds 11.2 of 15 agents, level with Claude Sonnet</h3>
         <div class="chart"></div>
-        <figcaption>Average agents found out of 15, partnering Claude Sonnet (following a written player guide) on the same 8 boards, 27 Oct–9 Nov 2026. Partners are in the order I built them; these are selected milestones. GloVe word vectors played only the first 4 boards. The 28 Oct version had no assassin losses in its 8 games. The live version added a fix for occasional 30-second stalls and scored lower on 7 of the 8 boards; the two were also played by different reference-player sessions. With 8 games each, gaps under about 1.5 agents don't mean much.</figcaption>
+        <figcaption>Average agents found out of 15, partnering Claude Sonnet (following a written player guide) on the same 8 boards, 27 Oct–9 Nov 2026. Partners are in the order I built them; these are selected milestones. GloVe word vectors played only the first 4 boards. The 28 Oct version had no assassin losses in its 8 games. The live version added a fix for occasional 30-second stalls and scored lower on 7 of the 8 boards, but in a different reference-player session. Rerun side by side in one session (3 rounds, 24 games each), the two found 10.9 and 10.6: no clear difference. With 8 games each, gaps under about 1.5 agents don't mean much.</figcaption>
       </figure>
 
       <figure class="fig" id="fig-clue">
@@ -172,7 +172,7 @@
       <figure class="fig" id="fig-speed">
         <h3 class="fig-title">One runaway reply stalled half the turns by 25 seconds</h3>
         <div class="chart strip"></div>
-        <figcaption>One dot per clue turn, from a test version that brainstormed 6 ideas (the live one does 8). Before the fix, half the turns waited about 25 seconds longer, because one test reply padded itself with blank space up to the 600-token limit. The fix allows only compact JSON and caps each test reply at 250 tokens. "After" is only 4 turns, and the fix seems to have cost some strength (13.0 agents found before, 11.2 after).</figcaption>
+        <figcaption>One dot per clue turn, from a test version that brainstormed 6 ideas (the live one does 8). Before the fix, half the turns waited about 25 seconds longer, because one test reply padded itself with blank space up to the 600-token limit. The fix allows only compact JSON and caps each test and guess reply at 250 tokens. "After" is only 4 turns. A side-by-side rerun found no clear cost in strength (10.9 agents found without the fix, 10.6 with it, 24 games each).</figcaption>
       </figure>
 
       <figure class="fig" id="fig-cost">

@@ -52,6 +52,9 @@ gemma_image = (
 # Volumes persist between containers, so the weights download once, not on every cold start.
 hf_cache = modal.Volume.from_name("huggingface-cache", create_if_missing=True)
 vllm_cache = modal.Volume.from_name("vllm-cache", create_if_missing=True)
+# FlashInfer (vLLM's sampling kernels) compiles some GPU code on first use. Without a volume that
+# compile (about a minute) repeated on every cold start; kept here it happens once per version.
+flashinfer_cache = modal.Volume.from_name("flashinfer-cache", create_if_missing=True)
 
 app = modal.App("cluo-duo-llm")
 
@@ -128,7 +131,8 @@ class Server:
         self.process.terminate()
 
 
-VOLUMES = {"/root/.cache/huggingface": hf_cache, "/root/.cache/vllm": vllm_cache}
+VOLUMES = {"/root/.cache/huggingface": hf_cache, "/root/.cache/vllm": vllm_cache,
+           "/root/.cache/flashinfer": flashinfer_cache}
 
 
 @app.cls(

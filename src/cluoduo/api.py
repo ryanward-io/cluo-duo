@@ -25,7 +25,7 @@ LOCAL_ORIGINS = r"http://(localhost|127\.0\.0\.1):\d+"  # any port; only used by
 class NewGame(BaseModel):
     first: Literal["human", "partner"] = "partner"
     partner: str = "random"
-    seed: int | None = Field(default=None, ge=0, lt=2**31)
+    seed: int | None = Field(default=None, ge=0, lt=2**31)  # local dev only: the layout follows from the seed
     sudden_death: bool = False
     turns: int = Field(default=game.TURNS, ge=game.TURNS, le=game.TURNS + game.EXTRA_TURNS)
     # False: return the board at once and let the client ask for the partner's first move (POST .../partner),
@@ -39,6 +39,10 @@ PROGRESS = "__progress__"  # store key prefix for a GPU partner's current step
 GPU_SEEN = "__gpu_seen__"  # when the GPU partner last answered anyone
 GPU_AWAKE_SECONDS = 4 * 60  # the GPU sleeps 5 minutes after its last call; allow a minute's margin
 GPU_GAMES_PER_DAY = 40
+# Each warm-up that wakes the GPU costs its boot plus 5 idle minutes, so cap them too, and skip any
+# warm-up while the GPU is already awake or was asked to wake recently.
+GPU_WARMS_PER_DAY = 40
+LAST_WARM = "__last_warm__"
 
 
 class Warm(BaseModel):
@@ -59,14 +63,22 @@ class Guess(BaseModel):
     index: int = Field(ge=0, lt=game.BOARD_SIZE)
 
 
+def owes_move(state: game.State) -> bool:
+    """Whether the AI side has a move to make (the same test play_partner loops on)."""
+    phase = state["phase"]
+    return ((phase == "clue" and state["giver"] == AI) or (phase == "guess" and state["clue"]["giver"] != AI)
+            or (phase == "sudden_death" and state["guesser"] == AI))
+
+
 def create_app(store: Store, allow_local: bool = False, warm_up=None) -> FastAPI:
-    app = FastAPI(title="Cluo Duo", docs_url=None, redoc_url=None)
+    app = FastAPI(title="Cluo Duo", docs_url=None, redoc_url=None, openapi_url=None)
     app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_origin_regex=LOCAL_ORIGINS if allow_local else None,
                        allow_methods=["GET", "POST"],
                        allow_headers=["Content-Type"])
 
     def load(game_id: str) -> game.State:
-        state = store.get(game_id)
+        # Keys starting "__" hold the server's own records (counters, progress), never games.
+        state = None if game_id.startswith("__") else store.get(game_id)
         if state is None:
             raise HTTPException(404, "Game not found (games expire after a while).")
         return state
@@ -86,7 +98,13 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None) -> FastAPI
 
     def partner_plays(state: game.State) -> game.State:
         player = partner_for(state)
-        gpu = state.get("partner") in GPU_PARTNERS
+        gpu = state.get("partner") in GPU_PARTNERS and owes_move(state)
+        if gpu and not state.get("gpu_counted"):
+            # Count a GPU game when it first needs the GPU, so games that never get that far can't use up the day.
+            if gpu_games_today(state["partner"]) >= GPU_GAMES_PER_DAY:
+                raise HTTPException(429, "The Advanced partner has had its games for today. Please try Basic, or come back tomorrow.")
+            gpu_games_today(state["partner"], add=True)
+            state["gpu_counted"] = True
         if gpu:
             # A GPU partner can take a while: it reports each step here, for GET .../progress.
             key = PROGRESS + state["id"]
@@ -122,10 +140,10 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None) -> FastAPI
     def health() -> dict:
         return {"ok": True}
 
-    def gpu_games_today(partner: str, add: bool = False) -> int:
+    def gpu_games_today(partner: str, add: bool = False, kind: str = "count") -> int:
         from datetime import datetime, timezone
 
-        key = f"__count__{partner}__{datetime.now(timezone.utc):%Y-%m-%d}"
+        key = f"__{kind}__{partner}__{datetime.now(timezone.utc):%Y-%m-%d}"
         record = store.get(key) or {"id": key, "count": 0}
         if add:
             record["count"] += 1
@@ -137,6 +155,14 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None) -> FastAPI
         """Called when a player selects a GPU partner, so the GPU boots while they read the menu."""
         if body.partner not in GPU_PARTNERS or gpu_games_today(body.partner) >= GPU_GAMES_PER_DAY:
             return {"ok": False}
+        now = time.time()
+        recent = max((store.get(GPU_SEEN) or {}).get("t", 0), (store.get(LAST_WARM) or {}).get("t", 0))
+        if now - recent < GPU_AWAKE_SECONDS:
+            return {"ok": True}  # awake, or already waking: nothing to do
+        if gpu_games_today(body.partner, kind="warms") >= GPU_WARMS_PER_DAY:
+            return {"ok": True}  # out of warm-ups for today; the game's first move still wakes it
+        gpu_games_today(body.partner, add=True, kind="warms")
+        store.put({"id": LAST_WARM, "t": now})
         if warm_up is not None:
             warm_up(GPU_PARTNERS[body.partner])
         return {"ok": True}
@@ -145,11 +171,10 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None) -> FastAPI
     def new(body: NewGame) -> dict:
         if body.partner not in PLAYERS:
             raise HTTPException(400, f"Unknown partner {body.partner!r}.")
-        if body.partner in GPU_PARTNERS:
-            if gpu_games_today(body.partner) >= GPU_GAMES_PER_DAY:
-                raise HTTPException(429, "The Advanced partner has had its games for today. Please try Basic, or come back tomorrow.")
-            gpu_games_today(body.partner, add=True)
-        state = game.new_game(seed=body.seed, first_clue=HUMAN if body.first == "human" else AI,
+        if body.partner in GPU_PARTNERS and gpu_games_today(body.partner) >= GPU_GAMES_PER_DAY:
+            raise HTTPException(429, "The Advanced partner has had its games for today. Please try Basic, or come back tomorrow.")
+        # A seed fixes the whole layout, partner's key included, and the code is public: local dev only.
+        state = game.new_game(seed=body.seed if allow_local else None, first_clue=HUMAN if body.first == "human" else AI,
                               sudden_death=body.sudden_death, turns=body.turns)
         state["partner"] = body.partner
         if body.partner_moves:

@@ -5,6 +5,7 @@ __pycache__/
 # Word vectors and model caches stay local; the reference games are published so the results can be checked.
 data/*
 !data/agent-games/
+data/agent-games/*.md
 
 # Local secrets: never committed
 *.env

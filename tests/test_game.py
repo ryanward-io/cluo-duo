@@ -441,7 +441,7 @@ def test_api_partner_thoughts_shown_only_after_the_game(monkeypatch):
     monkeypatch.setitem(players.PLAYERS, "smart", lambda seed=None: SmartPlayer(
         seed, backend=fake, fallback=GloveRankPlayer(0), llm_guesses=True, glove_vetting=False))
     store = MemoryStore()
-    client = TestClient(create_app(store))
+    client = TestClient(create_app(store, allow_local=True))  # seed 4 only counts locally: a fixed board
     v = client.post("/api/games", json={"first": "partner", "seed": 4, "partner": "smart"}).json()
     assert v["history"][0]["type"] == "clue" and v["thoughts"] is None  # would give its key away
     assassin = store.get(v["id"])["key"]["b"].index("A")

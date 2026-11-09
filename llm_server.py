@@ -246,6 +246,33 @@ class Gemma31(Server):
 
 @app.cls(
     image=gemma_image,
+    gpu="L40S",
+    volumes=VOLUMES,
+    min_containers=0,
+    max_containers=1,
+    scaledown_window=5 * MINUTES,
+    timeout=5 * MINUTES,
+    startup_timeout=30 * MINUTES,
+)
+@modal.concurrent(max_inputs=64)
+class Gemma31Loose(Server):
+    """Gemma31 as it was on 28 Oct, before compact JSON: for the speed-vs-strength rerun only."""
+
+    MODEL = "RedHatAI/gemma-4-31B-it-FP8-dynamic"
+    REVISION = "d4ab4f579dd3516f97d8a6a4c98d0653480bad15"
+    REASONING_PARSER = None
+    VLLM_ARGS = [
+        "--language-model-only",
+        "--max-model-len", "16384",
+        "--gpu-memory-utilization", "0.92",
+        "--max-num-seqs", "32",
+        "--max-cudagraph-capture-size", "32",
+    ]
+    SAMPLING = {"top_p": 0.95, "top_k": 64}  # model card
+
+
+@app.cls(
+    image=gemma_image,
     gpu="H100",
     volumes=VOLUMES,
     min_containers=0,

@@ -100,8 +100,9 @@ class LLMPlayer:
     name = "qwen"
 
     def __init__(self, seed: int | None = None, *, backend: Backend | None = None, server: str = "LLM",
-                 thinking: bool = False, fallback: Any = None, **_ignored):
+                 thinking: bool = False, fallback: Any = None, short_tokens: int = 250, **_ignored):
         self.backend = backend or modal_backend(server)
+        self.short_tokens = short_tokens  # cap on guess and rehearsal replies (600 before 31 Oct)
         self.thinking = thinking
         self.seed = seed or 0
         self._fallback = fallback
@@ -141,7 +142,7 @@ class LLMPlayer:
         # A guess reply is about 100 tokens. The cap stops one that rambles from holding up the turn:
         # cut off, it fails to parse and counts as no guesses.
         reply = self.backend(messages, schema=schema, thinking=self.thinking, seed=self.seed + len(self.log),
-                             max_tokens=THINKING_TOKENS if self.thinking else 600 if kind == "clue" else 250)
+                             max_tokens=THINKING_TOKENS if self.thinking else 600 if kind == "clue" else self.short_tokens)
         try:
             data = json.loads(reply["content"])
         except (json.JSONDecodeError, KeyError, TypeError):

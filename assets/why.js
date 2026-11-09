@@ -55,11 +55,12 @@ function bars(host, rows, { max, ticks, unit = "" }) {
 const PROGRESS = [
   { label: "Random", note: "a floor", value: 2.8, text: "2.8" },
   { label: "GloVe word vectors", note: "closest words to a clue", value: 6.0, text: "6.0" },
-  { label: "Basic", note: "GloVe + Bayesian guessing", value: 8.2, text: "8.2" },
+  { label: "Basic", note: "GloVe + Bayesian guessing", value: 9.0, text: "9.0" },
   { label: "Qwen 3.6 gives clues", note: "GloVe checks them and guesses", value: 8.6, text: "8.6" },
   { label: "Gemma 4 gives clues", note: "same setup, better model", value: 10.4, text: "10.4" },
   { label: "Gemma guesses too", value: 11.0, text: "11.0" },
-  { label: "Gemma alone (Advanced)", note: "no GloVe; tests every clue idea", value: 13.0, text: "13.0", hi: true },
+  { label: "Gemma alone, 28 Oct", note: "no GloVe; tests every clue idea", value: 13.0, text: "13.0" },
+  { label: "Advanced (live)", note: "the same, with the speed fix", value: 11.2, text: "11.2", hi: true },
   "sep",
   { label: "Claude Sonnet as partner", note: "paid API; for comparison", value: 11.2, text: "11.2" },
 ];
@@ -72,9 +73,18 @@ const MODELS = [
   { label: "Gemma 4 31B", note: "31B · Google", value: 10.4, text: "10.4", hi: true },
 ];
 
+// Games played while building and testing, by kind. Reference and two-agent games are counted from
+// data/agent-games; self-play counts are rebuilt from session logs (evaluate.py prints, never saves).
+const GAMES = [
+  { label: "Self-play, GloVe partners", note: "tuning Basic's settings", value: 17260, text: "≈17,260" },
+  { label: "Self-play, LLM partners", note: "20 games per version", value: 400, text: "≈400" },
+  { label: "Two AI players", note: "refining the player guide", value: 170, text: "170" },
+  { label: "Reference player + partner", note: "the yardstick for the results", value: 162, text: "162", hi: true },
+];
+
 // Rough per-game estimates (US$), not measured bills: see the caption.
 const COST = [
-  { label: "Gemma 4 on our own GPU", note: "L40S at ~$1.95/h, awake ~15–20 min", value: [0.4, 0.7], text: "$0.40–0.70", hi: true },
+  { label: "Gemma 4 on my own GPU", note: "L40S at ~$1.95/h, awake ~15–20 min", value: [0.4, 0.7], text: "$0.40–0.70", hi: true },
   { label: "Claude Sonnet, medium effort", value: [0.15, 0.25], text: "$0.15–0.25" },
   { label: "Claude Opus, medium effort", value: [0.3, 0.5], text: "$0.30–0.50" },
   { label: "Claude Opus, max effort", note: "~5 min per clue", value: [1.5, 2.5], text: "$1.50–2.50" },
@@ -178,6 +188,8 @@ if ($("#fig-progress")) {
   bars($("#fig-progress .chart"), PROGRESS, { max: 15, ticks: [0, 5, 10, 15] });
   table($("#fig-progress .chart"), ["Partner", "Agents found (of 15)"], PROGRESS.filter((r) => r !== "sep").map((r) => [r.label, r.text]));
   bars($("#fig-models .chart"), MODELS, { max: 15, ticks: [0, 5, 10, 15] });
+  bars($("#fig-games .chart"), GAMES, { max: 20000, ticks: ["0", "5,000", "10,000", "15,000", "20,000"] });
+  table($("#fig-games .chart"), ["Kind of game", "Games"], GAMES.map((r) => [r.label, r.text]));
   bars($("#fig-cost .chart"), COST, { max: 3, ticks: ["$0", "$1", "$2", "$3"] });
   const data = await fetch(new URL(`why-data.json${new URL(import.meta.url).search}`, import.meta.url)).then((r) => r.json());
   clueWalk($("#fig-clue .chart"), data.clue);

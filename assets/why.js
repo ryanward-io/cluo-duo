@@ -43,14 +43,14 @@ function bars(host, rows, { max, ticks }) {
 // Partners in the order I built them (selected milestones), each against the same reference player.
 const PROGRESS = [
   { label: "Random", note: "a floor", value: 2.8, text: "2.8" },
-  { label: "GloVe word vectors", note: "closest words to a clue; 4 boards", value: 6.0, text: "6.0" },
+  { label: "GloVe word vectors", note: "closest words to a clue, 4 boards only", value: 6.0, text: "6.0" },
   { label: "Basic", note: "GloVe + Bayesian guessing", value: 9.0, text: "9.0" },
   { label: "Qwen 3.6 35B-A3B gives clues", note: "GloVe checks them and guesses", value: 8.6, text: "8.6" },
   { label: "Gemma 4 31B gives clues", note: "same setup, better model", value: 10.4, text: "10.4" },
   { label: "Gemma guesses too", value: 11.0, text: "11.0" },
-  { label: "Gemma alone (live Advanced)", note: "no GloVe; tests every clue idea", value: 11.2, text: "11.2", hi: true },
+  { label: "Gemma alone (live Advanced)", note: "no GloVe, tests every clue idea", value: 11.2, text: "11.2", hi: true },
   "sep",
-  { label: "Claude Sonnet as partner", note: "paid API; for comparison", value: 11.2, text: "11.2" },
+  { label: "Claude Sonnet as partner", note: "paid API, for comparison", value: 11.2, text: "11.2" },
 ];
 
 const MODELS = [
@@ -58,7 +58,7 @@ const MODELS = [
   { label: "Qwen 3.6 35B-A3B", note: "35B, 3B active · Alibaba", value: 8.6, text: "8.6" },
   { label: "Qwen 3.6 27B", note: "27B · Alibaba", value: 9.4, text: "9.4" },
   { label: "gpt-oss-120b", note: "120B, ~5B active · OpenAI", value: 10.4, text: "10.4" },
-  { label: "Gemma 4 31B", note: "31B · Google", value: 10.4, text: "10.4", hi: true },
+  { label: "Gemma 4 31B", note: "31B · Google · used live", value: 10.4, text: "10.4", hi: true },
 ];
 
 // Games played while building and testing. Reference and two-agent games are counted from
@@ -67,17 +67,16 @@ const MODELS = [
 const SELF_PLAY_GLOVE = "about 17,000";
 const GAMES = [
   { label: "Self-play, LLM partners", note: "20 games per version, on the GPU", value: 400, text: "about 400" },
-  { label: "Two AI players", note: "refining the player guide", value: 172, text: "172" },
+  { label: "Two AI players", note: "mostly refining the player guide", value: 172, text: "172" },
   { label: "Reference player + partner", note: "the games behind the results", value: 208, text: "208", hi: true },
 ];
 
 // US$ per game. GPU: Modal's bill (see the caption). Claude: rough estimates from token use, not bills.
 const COST = [
-  { label: "Gemma 4 on a rented GPU", note: "Modal L40S, billed while awake", value: [0.27, 0.75], text: "$0.27–0.75", hi: true },
+  { label: "Gemma 4 on a rented GPU", note: "Modal L40S, billed while awake", value: [0.27, 0.58], text: "$0.27–0.58", hi: true },
   { label: "Claude Sonnet, medium effort", note: "estimate", value: [0.15, 0.25], text: "$0.15–0.25" },
   { label: "Claude Opus, medium effort", note: "estimate", value: [0.3, 0.5], text: "$0.30–0.50" },
-  { label: "Claude Opus, max effort", note: "estimate; ~2 min per clue", value: [1.0, 1.5], text: "$1.00–1.50" },
-  { label: "DeepSeek V4.1 Flash", note: "Modal's quoted price; not tested", value: 0.01, text: "~$0.01" },
+  { label: "Claude Opus, max effort", note: "estimate, ~2 min per clue", value: [1.0, 1.5], text: "$1.00–1.50" },
 ];
 
 // ---------- one clue, step by step ----------
@@ -141,7 +140,7 @@ function clueWalk(host, data) {
   render();
   host.replaceChildren(el("div", { class: "steps", role: "group", "aria-label": "Steps" }, stepButtons), note,
     el("div", { class: "clue-walk" },
-      el("div", {}, board, el("p", { class: "mini-legend" }, "Outlined: the idea's targets. Underlined: its test guesses.")),
+      el("div", {}, board, el("p", { class: "mini-legend", "aria-hidden": "true" }, "Outlined: the idea's targets. Underlined: its test guesses.")),
       el("div", {}, el("ul", { class: "ideas", "aria-label": "Clue ideas" }, ideaItems.map((x) => el("li", {}, x.button))), reason)));
 }
 

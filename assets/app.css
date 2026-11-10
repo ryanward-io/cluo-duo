@@ -263,7 +263,8 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .fig-title { font-size: 1rem; font-weight: 700; margin: 0 0 8px; }
 .prose .footnote { color: var(--muted); font-size: 0.88rem; }
 .fig-toggle { margin: 8px 0 24px; }
-.fig-toggle > summary { cursor: pointer; color: var(--accent); }
+.fig-toggle > summary { cursor: pointer; color: var(--accent); padding: 10px 0; }
+.prose .lede { font-size: 1.02rem; }
 .fig-toggle > .fig { margin-top: 12px; }
 .fig-stat { font-size: 0.92rem; margin: 0 0 10px; }
 .fig-stat strong { font-size: 1.25rem; }
@@ -274,7 +275,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 /* Architecture: a column of boxes joined by labelled arrows, so it reads at phone width. */
 .arch { display: grid; gap: 0; max-width: 560px; }
 .arch-node { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--bg); }
-.arch-node h5 { margin: 0; font-size: 0.98rem; }
+.arch-node h4 { margin: 0; font-size: 0.98rem; }
 .arch-node .where { color: var(--muted); font-size: 0.82rem; margin: 0 0 4px; }
 .arch-node ul { margin: 4px 0 0; padding-left: 18px; font-size: 0.88rem; }
 .arch-node li { margin: 2px 0; }

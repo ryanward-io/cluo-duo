@@ -343,6 +343,8 @@ function render(before = null) {
   turns.classList.toggle("low", low);
   $("#partner-name").textContent = `Partner: ${PARTNERS[state.partner] || state.partner}`;
   renderBoard(before);
+  // Once the game is over the partner's key is shown, so the legend explains those marks too.
+  for (const item of document.querySelectorAll(".legend .after-game")) item.hidden = state.phase !== "over";
   renderTips();
   renderLog();
   renderThoughts();

@@ -15,10 +15,10 @@
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="The Cluo Duo board with the clue PEST 2, pointing at SPIDER and RACCOON">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="stylesheet" href="assets/app.css?v=202611102230">
-  <script src="assets/theme.js?v=202611102230"></script>
-  <script src="assets/why.js?v=202611102230" type="module"></script>
-  <script src="assets/app.js?v=202611102230" type="module"></script>
+  <link rel="stylesheet" href="assets/app.css?v=202611102300">
+  <script src="assets/theme.js?v=202611102300"></script>
+  <script src="assets/why.js?v=202611102300" type="module"></script>
+  <script src="assets/app.js?v=202611102300" type="module"></script>
 </head>
 <body>
   <header class="site">
@@ -107,6 +107,8 @@
         <span><i class="assassin-icon"><svg class="skull" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M8 1C4.1 1 1.5 3.6 1.5 7c0 2 .9 3.4 2.3 4.2V13a1 1 0 0 0 1 1h.9v-1.5h1V14h2.6v-1.5h1V14h.9a1 1 0 0 0 1-1v-1.8c1.4-.8 2.3-2.2 2.3-4.2C14.5 3.6 11.9 1 8 1zM5.3 9.6a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2zm5.4 0a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2zM8 11.2l-.9-1.6h1.8z"/></svg></i> your assassin</span>
         <span><i class="mark mine" data-pawn></i> bystander on your key</span>
         <span><i class="mark theirs" data-pawn></i> bystander on partner's key</span>
+        <span class="after-game" hidden><i class="dot agent partner"></i> partner's agent</span>
+        <span class="after-game" hidden><i class="assassin-icon partner"><svg class="skull" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M8 1C4.1 1 1.5 3.6 1.5 7c0 2 .9 3.4 2.3 4.2V13a1 1 0 0 0 1 1h.9v-1.5h1V14h2.6v-1.5h1V14h.9a1 1 0 0 0 1-1v-1.8c1.4-.8 2.3-2.2 2.3-4.2C14.5 3.6 11.9 1 8 1zM5.3 9.6a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2zm5.4 0a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2zM8 11.2l-.9-1.6h1.8z"/></svg></i> partner's assassin</span>
       </div>
 
       <details class="log" open>
@@ -122,19 +124,29 @@
 
     <div id="tab-how" role="tabpanel" aria-labelledby="tab-btn-how" class="panel prose" hidden>
       <h2>How to play</h2>
+      <p class="lede">You and your AI partner team up to find 15 agents hidden among 25 words before you run out of turns. Hit an assassin and you both lose.</p>
+
+      <h3>The basics</h3>
       <ul>
-        <li>You and your partner share 25 words. Each of you has a secret key: 9 of the words are your <strong>agents</strong> (green), 3 are <strong>assassins</strong>, and the rest are bystanders. Your keys overlap but aren't the same, so there are 15 agents to find between you.</li>
-        <li>Take turns giving a <strong>one-word clue and a number</strong> that point to agents on your own key. Your partner guesses words one at a time.</li>
-        <li>When you guess, your partner's key decides: an agent and you can keep going; a bystander ends the turn; an assassin loses the game.</li>
-        <li>Clues can't be a word on the board, contain one, be part of one (MAIL or MAILS when MAILBOX is out), or be another spelling of one.</li>
-        <li>Find all 15 agents within 9 turns to win (or 10 or 11 on the easier settings). With the optional <strong>sudden death</strong> rule, running out of turns isn't the end: no more clues, you take turns guessing your partner's agents, and any wrong guess loses.</li>
+        <li><strong>Your key.</strong> You each have a secret key to the board. On yours, a green dot marks one of your 9 agents and a skull one of your 3 assassins. The rest are bystanders. Your partner's key is different, but 3 agents are shared between boards, so there are 15 to find.</li>
+        <li><strong>Giving a clue.</strong> One word and a number pointing at your green-dot words – like PEST 2 for SPIDER and RACCOON. Steer clear of your skulls.</li>
+        <li><strong>Guessing.</strong> When your partner gives a clue, pick words one at a time. An agent turns green and you can keep going, even past the number. A bystander ends the turn, and an assassin ends the game. You have to guess at least once, then stop whenever you like.</li>
+        <li><strong>Turns.</strong> Every clue uses one turn, whoever gives it. You get 11 by default – pick 10, or 9 like the board game, for a harder game. Once one of you has no agents left to find, the other gives the rest of the clues.</li>
+        <li><strong>Clue rules.</strong> Your clue can't be a word on the board, or contain or be part of one – if MAILBOX is on the board, MAIL and MAILS are out. Other spellings like COLOUR for COLOR are out too.</li>
       </ul>
+
+      <h3>Options</h3>
+      <ul>
+        <li><strong>Sudden death</strong> (off by default): when turns run out, there are no more clues. You take turns guessing your partner's agents, and any miss loses.</li>
+        <li><strong>Show odds:</strong> shows the chance each word is your partner's agent, plus the pace you need. Handy while you're learning.</li>
+      </ul>
+
       <h3>Tips</h3>
       <ul>
-        <li>Your own green words are not hints about your partner's clues: only 3 of your 9 agents are theirs too.</li>
-        <li>Each of your assassins is an assassin for your partner one time in three, so be careful guessing them.</li>
-        <li>After a correct guess, a wrong guess that lands on a bystander costs nothing more than stopping. Only assassins are dangerous.</li>
-        <li>A clue that hit a bystander still points at its other words. Come back to them later.</li>
+        <li>Don't read much into your green dots when your partner gives clues – only 3 of your 9 agents are theirs too.</li>
+        <li>No word is totally safe. One of your skulls is also their assassin, and so is one of your green-dot words and one of your bystanders.</li>
+        <li>Once you've got one right, a hunch is cheap – a bystander just ends the turn, same as stopping (not in sudden death).</li>
+        <li>If a clue hit a bystander, its other words are still out there – come back to them later.</li>
       </ul>
     </div>
 

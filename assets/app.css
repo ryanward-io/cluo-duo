@@ -155,6 +155,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .mark.theirs { color: var(--theirs); }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.85rem; margin: 8px 0 14px; }
 .legend i { font-style: normal; }
+.legend .dot.partner { margin: 0 3px; }
 
 .action { display: flex; flex-direction: column; gap: 10px; }
 .action p { margin: 0; }

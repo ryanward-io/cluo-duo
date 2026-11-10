@@ -15,10 +15,10 @@
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="The Cluo Duo board with the clue PEST 2, pointing at SPIDER and RACCOON">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="stylesheet" href="assets/app.css?v=202611102330">
-  <script src="assets/theme.js?v=202611102330"></script>
-  <script src="assets/why.js?v=202611102330" type="module"></script>
-  <script src="assets/app.js?v=202611102330" type="module"></script>
+  <link rel="stylesheet" href="assets/app.css?v=202611110000">
+  <script src="assets/theme.js?v=202611110000"></script>
+  <script src="assets/why.js?v=202611110000" type="module"></script>
+  <script src="assets/app.js?v=202611110000" type="module"></script>
 </head>
 <body>
   <header class="site">
@@ -154,6 +154,16 @@
       <h2>Why I built it</h2>
       <p class="lede">TL;DR: I wanted a portfolio piece that incorporates an LLM so I built an AI partner for a fun co-op word game, ultimately using Google's open model Gemma 4 running on its own GPU.</p>
 
+      <figure class="fig" id="fig-games">
+        <h3 class="fig-title">About 18,000 games of testing</h3>
+        <div class="stat-tiles">
+          <p><strong>18,000</strong> games played while building it, roughly</p>
+          <p><strong>208</strong> of them against an outside player, the real test</p>
+          <p><strong>20+</strong> partner versions, all tested on the same boards</p>
+        </div>
+        <figcaption>Most were quick GloVe self-play on a CPU (about 17,000), used to tune Basic. Self-play flatters a partner, so the outside-player games are the ones behind the results below.</figcaption>
+      </figure>
+
       <h3>I love board games</h3>
       <p>I've always loved board games. Cooperative board games like Codenames Duet are especially fun where you work towards a friend to solve a common goal. I enjoy adversarial games too, but teamwork is better for me than straining friendships.</p>
       <p>In 2021, I wanted to use some of the latest word analysis and AI tools to make an AI partner to play with. I worked on it, but it was a slog and ended up unfinished.</p>
@@ -163,25 +173,9 @@
       <p>Word association games should be a perfect problem for an LLM. But the game isn't just about creating word associations, it's about theory of mind: how is the other player going to read the clues you give?</p>
       <p>To solve this, every version played the same 8 boards with an outside player (Claude Sonnet, following its own guide), to tune the Basic model and find the best instructions for the Advanced model.</p>
 
-      <figure class="fig" id="fig-games">
-        <h4 class="fig-title">About 18,000 games of testing</h4>
-        <div class="stat-tiles">
-          <p><strong>18,000</strong> games played while building it, roughly</p>
-          <p><strong>208</strong> of them against an outside player, the real test</p>
-          <p><strong>20+</strong> partner versions, all tested on the same boards</p>
-        </div>
-        <figcaption>Most were quick GloVe self-play on a CPU (about 17,000), used to tune Basic. Self-play flatters a partner, so the outside-player games are the ones behind the results below.</figcaption>
-      </figure>
-
       <h3>How the partners evolved</h3>
       <p>I started with a random baseline, before fleshing out the GloVe + Bayesian partner, then trialling different LLMs and eventually finding Google's Gemma to be the best small model performer. Sonnet would cost less per game than the GPU for a single player, but I get $30 of credits for free with Modal each month so I may as well use them. Running an open model myself was part of the learning too, rather than just plugging in an API key.</p>
       <p>Opus 5.5 at max effort played well but was slow (about 2 minutes a clue) and cost over $1 a game. Not the right fit for a personal site, so Advanced stays with Gemma.</p>
-
-      <figure class="fig" id="fig-models">
-        <h4 class="fig-title">Bigger wasn't better: Gemma 4 31B tied a 120B model</h4>
-        <div class="chart"></div>
-        <figcaption>Each model gives the clues while GloVe checks them and guesses, 8 games each, late Oct 2026. gpt-oss-120b tied Gemma and hit fewer assassins, but only about 5B of its 120B parameters are active at a time.</figcaption>
-      </figure>
 
       <figure class="fig" id="fig-cost">
         <h4 class="fig-title">A lone player on the GPU costs more than Claude Sonnet would</h4>
@@ -196,14 +190,35 @@
       </figure>
 
       <h3>Inside one clue</h3>
-      <details class="fig-toggle">
-        <summary>Show a real clue turn, step by step</summary>
-        <figure class="fig" id="fig-clue">
-            <h4 class="fig-title">Gemma tests every clue idea on itself before giving one</h4>
-            <div class="chart"></div>
-            <figcaption>A real turn from a test game, before the speed fix. Gemma gave PEST 2.</figcaption>
-          </figure>
-      </details>
+      <figure class="fig" id="fig-clue">
+          <h4 class="fig-title">Gemma tests every clue idea on itself before giving one</h4>
+          <div class="chart"></div>
+          <figcaption>A real turn from a test game, before the speed fix. Gemma gave PEST 2.</figcaption>
+        </figure>
+
+      <h3>Lessons</h3>
+      <ul>
+        <li>I had figured a bigger model would be better, but gpt-oss-120b only tied the 31B Gemma (it did hit fewer assassins).</li>
+        <li>Letting the model rehearse as the guesser seemed to make its clues safer (see Inside one clue above).</li>
+        <li>I could experiment fast by setting some guardrails before letting Opus iterate on the reference player's guide. It got up to v10, but results had plateaued, so I kept v9.</li>
+        <li>Often I could get better performance by pointing Opus at something unsatisfying and telling it to improve it. It didn't seem to do much of this step by itself, and needed the prompting.</li>
+        <li>Given the time and cost, I didn't run thousands of experiments so I used smaller samples (8 boards) and checked the key comparisons with paired tests (a sign test on each board, plus a bootstrap interval).</li>
+      </ul>
+
+      <h3>Making it faster</h3>
+      <ul>
+        <li>About half of Gemma's turns took over 30 seconds, which ended up being a weird quirk in how it wrote its JSON replies: one test reply would pad itself with blank space until it hit the token limit.</li>
+        <li>The fix was forcing compact JSON with no whitespace so it could no longer ramble, and testing its ideas went from a max of 36 seconds to ~6.</li>
+        <li>I tried other things to improve response speed like cutting from 8 clue ideas to 6. It saved about 2s, but the testing looked worse, so I kept 8.</li>
+        <li>I also added some better UX alongside it: the GPU starts waking the moment the Advanced button is pressed, the board shows straight away while the GPU wakes up so players can start absorbing the words, and live progress messages say what the AI is doing.</li>
+      </ul>
+
+      <h3>LLM cost and safety</h3>
+      <ul>
+        <li>The GPU is private (no public URL), sleeps when idle and never runs more than one. Advanced switches off at $27 of the month's $30 of credit, so Basic (GloVe on the CPU) keeps the game playable.</li>
+        <li>Cost controls on the server: daily cap on GPU games, timeouts, GPU warm-up only when Advanced is picked, fallback to Basic if the model fails.</li>
+        <li>Rude-word and political filter on AI clues (one game I played it said KINKY 2. Not the worst but best avoided 😅).</li>
+      </ul>
 
       <h3>The architecture</h3>
 
@@ -251,30 +266,6 @@
           </div>
         </div>
       </figure>
-
-      <h3>Lessons</h3>
-      <ul>
-        <li>I had figured a bigger model would be better, but gpt-oss-120b only tied the 31B Gemma (it did hit fewer assassins).</li>
-        <li>Letting the model rehearse as the guesser seemed to make its clues safer (see Inside one clue above).</li>
-        <li>I could experiment fast by setting some guardrails before letting Opus iterate on the reference player's guide. It got up to v10, but results had plateaued, so I kept v9.</li>
-        <li>Often I could get better performance by pointing Opus at something unsatisfying and telling it to improve it. It didn't seem to do much of this step by itself, and needed the prompting.</li>
-        <li>Given the time and cost, I didn't run thousands of experiments so I used smaller samples (8 boards) and checked the key comparisons with paired tests (a sign test on each board, plus a bootstrap interval).</li>
-      </ul>
-
-      <h3>Making it faster</h3>
-      <ul>
-        <li>About half of Gemma's turns took over 30 seconds, which ended up being a weird quirk in how it wrote its JSON replies: one test reply would pad itself with blank space until it hit the token limit.</li>
-        <li>The fix was forcing compact JSON with no whitespace so it could no longer ramble, and testing its ideas went from a max of 36 seconds to ~6.</li>
-        <li>I tried other things to improve response speed like cutting from 8 clue ideas to 6. It saved about 2s, but the testing looked worse, so I kept 8.</li>
-        <li>I also added some better UX alongside it: the GPU starts waking the moment the Advanced button is pressed, the board shows straight away while the GPU wakes up so players can start absorbing the words, and live progress messages say what the AI is doing.</li>
-      </ul>
-
-      <h3>LLM cost and safety safeguards</h3>
-      <ul>
-        <li>The GPU is private (no public URL), sleeps when idle and never runs more than one. Advanced switches off at $27 of the month's $30 of credit, so Basic (GloVe on the CPU) keeps the game playable.</li>
-        <li>Cost controls on the server: daily cap on GPU games, timeouts, GPU warm-up only when Advanced is picked, fallback to Basic if the model fails.</li>
-        <li>Rude-word and political filter on AI clues (one game I played it said KINKY 2. Not the worst but best avoided 😅).</li>
-      </ul>
     </div>
   </main>
 

@@ -290,10 +290,7 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .fig figcaption { color: var(--muted); font-size: 0.88rem; margin-top: 8px; line-height: 1.45; }
 .fig-title { font-size: 1rem; font-weight: 700; margin: 0 0 8px; }
 .prose .footnote { color: var(--muted); font-size: 0.88rem; }
-.fig-toggle { margin: 8px 0 24px; }
-.fig-toggle > summary { cursor: pointer; color: var(--accent); padding: 10px 0; }
 .prose .lede { font-size: 1.02rem; }
-.fig-toggle > .fig { margin-top: 12px; }
 .stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .stat-tiles p { margin: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); font-size: 0.9rem; line-height: 1.35; color: var(--muted); }
 .stat-tiles strong { display: block; font-size: 1.9rem; font-weight: 900; line-height: 1.1; color: var(--text); margin-bottom: 4px; }

@@ -53,13 +53,6 @@ const PROGRESS = [
   { label: "Claude Sonnet as partner", note: "paid API, for comparison", value: 11.2, text: "11.2" },
 ];
 
-const MODELS = [
-  { label: "Mistral Small 3.2", note: "24B · Mistral AI", value: 8.5, text: "8.5" },
-  { label: "Qwen 3.6 35B-A3B", note: "35B, 3B active · Alibaba", value: 8.6, text: "8.6" },
-  { label: "Qwen 3.6 27B", note: "27B · Alibaba", value: 9.4, text: "9.4" },
-  { label: "gpt-oss-120b", note: "120B, ~5B active · OpenAI", value: 10.4, text: "10.4" },
-  { label: "Gemma 4 31B", note: "31B · Google · used live", value: 10.4, text: "10.4", hi: true },
-];
 
 // The games figure is plain HTML in index.html. Counts: reference games and partner versions from data/agent-games
 // (boards 200-207); self-play totals rebuilt from session logs, since evaluate.py and compare.py never saved results.
@@ -142,7 +135,6 @@ const $ = (s) => document.querySelector(s);
 if ($("#fig-progress")) {
   const fifteen = [0, 5, 10, 15].map((v) => [v, String(v)]);
   bars($("#fig-progress .chart"), PROGRESS, { max: 15, ticks: fifteen });
-  bars($("#fig-models .chart"), MODELS, { max: 15, ticks: fifteen });
   bars($("#fig-cost .chart"), COST, { max: 2, ticks: [[0, "$0"], [0.5, "$0.50"], [1, "$1"], [1.5, "$1.50"], [2, "$2"]] });
   try {
     const res = await fetch(new URL(`why-data.json${new URL(import.meta.url).search}`, import.meta.url));

@@ -1,4 +1,4 @@
-"""API guards: seeds, warm-up limits, the daily GPU game count and reserved store keys."""
+"""API guards: seeds, warm-up limits, the daily GPU game count, the monthly GPU budget and reserved store keys."""
 
 import pytest
 from fastapi.testclient import TestClient
@@ -66,3 +66,49 @@ def test_gpu_game_counted_at_first_partner_move(gpu_random, monkeypatch):
     # The same game carries on; a new one is refused.
     assert c.post(f"/api/games/{g['id']}/partner").status_code == 200
     assert c.post("/api/games", json={"partner": "random"}).status_code == 429
+
+
+def test_monthly_budget_under_limit_allows_play(gpu_random):
+    dollars = [26.0]
+    c = TestClient(api.create_app(MemoryStore(), usage=lambda: dollars[0]))
+    assert c.post("/api/games", json={"partner": "random", "first": "human"}).status_code == 200
+    dollars[0] = 27.5
+    assert c.post("/api/games", json={"partner": "random", "first": "human"}).status_code == 200  # figure cached for an hour
+
+
+def test_monthly_budget_over_limit(gpu_random):
+    calls = []
+    c = TestClient(api.create_app(MemoryStore(), warm_up=calls.append, usage=lambda: 27.0))
+    r = c.post("/api/games", json={"partner": "random", "first": "human"})
+    assert r.status_code == 429 and "this month" in r.json()["detail"]
+    assert c.post("/api/warm", json={"partner": "random"}).json() == {"ok": False}
+    assert calls == []
+
+
+def test_monthly_budget_refreshes_hourly(gpu_random, monkeypatch):
+    dollars = [26.0]
+    reads = []
+    def usage():
+        reads.append(1)
+        return dollars[0]
+    store = MemoryStore()
+    c = TestClient(api.create_app(store, usage=usage))
+    c.post("/api/games", json={"partner": "random", "first": "human"})
+    c.post("/api/games", json={"partner": "random", "first": "human"})
+    assert len(reads) == 1
+    dollars[0] = 28.0
+    store.put(store.get(api.USAGE) | {"t": 0})  # an hour has passed
+    assert c.post("/api/games", json={"partner": "random", "first": "human"}).status_code == 429
+    assert len(reads) == 2
+
+
+def test_monthly_budget_lookup_failure_allows_play(gpu_random):
+    def broken():
+        raise RuntimeError("billing unavailable")
+    c = TestClient(api.create_app(MemoryStore(), usage=broken))
+    assert c.post("/api/games", json={"partner": "random", "first": "human"}).status_code == 200
+
+
+def test_basic_unaffected_by_monthly_budget():
+    c = TestClient(api.create_app(MemoryStore(), usage=lambda: 100.0))
+    assert c.post("/api/games", json={"partner": "glove-rank", "first": "human"}).status_code == 200

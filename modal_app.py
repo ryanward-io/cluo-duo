@@ -53,4 +53,12 @@ def web():
 
     from cluoduo.llm import warm_up
 
-    return create_app(ModalDictStore(games), warm_up=warm_up)
+    return create_app(ModalDictStore(games), warm_up=warm_up, usage=usage_this_month)
+
+
+def usage_this_month() -> float:
+    """This month's workspace usage in dollars, as Modal's usage limit counts it: metered cost less
+    the free storage and egress allowances, before credits. Read with the container's own token."""
+    s = modal.Workspace.from_context().billing.summary()
+    free = sum(s.adjustments.get(k, 0) for k in ("Free Storage", "Network Egress Allowance"))  # negative
+    return float(s.metered_cost + free)

@@ -50,8 +50,17 @@
   --theirs: #b59cf0; --error: #ff8a80; --dead: #24262a; --warn: #f5a524; --warn-bg: rgba(245, 165, 36, 0.15);
 }
 
+/* Muli (now Mulish), the same self-hosted font as ryanward.dev's blog. SIL Open Font License 1.1. */
+@font-face { font-family: "Muli"; font-style: normal; font-weight: 200 1000; font-display: swap;
+  src: url("fonts/muli-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Muli"; font-style: normal; font-weight: 200 1000; font-display: swap;
+  src: url("fonts/muli-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 "Muli", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+h1, h2, h3 { font-weight: 900; line-height: 1.25; }
 a { color: var(--accent); }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
@@ -224,7 +233,8 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .options .check { font-weight: 600; }
 .options .check .muted { font-weight: 400; font-size: 0.85rem; }
 #start { margin-top: 2px; }
-.prose { line-height: 1.6; }
+.prose { line-height: 1.5; }
+.prose > p, .prose > ul { max-width: 42rem; }
 .prose h2 { margin-bottom: 8px; }
 .prose h3 { margin: 18px 0 6px; font-size: 1.05rem; }
 .prose li { margin: 6px 0; }
@@ -335,19 +345,11 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 .walk-note { font-size: 0.88rem; margin: 0 0 10px; min-height: 4.2em; }
 .walk-reason { font-size: 0.82rem; color: var(--muted); margin: 6px 0 0; font-style: italic; }
 
-/* Speed strip plot */
-.strip svg { width: 100%; height: auto; display: block; overflow: visible; }
-.strip .grid { stroke: var(--border); stroke-width: 1; }
-.strip .tick { fill: var(--muted); font-size: 12px; }
-.strip .rowlabel { fill: var(--text); font-size: 13px; font-weight: 600; }
-.strip .dot { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
-.strip .dot.slow { fill: var(--warn); }
-.strip .note { fill: var(--muted); font-size: 12px; }
 
 @media (forced-colors: active) {
   /* Keep the figures' bars, marks and selected states visible in high-contrast modes. */
-  .bars .bar, .mini-board span::before, .strip .dot { forced-color-adjust: none; background: CanvasText; fill: CanvasText; opacity: 1; }
-  .bars .hi .bar, .strip .dot.slow { background: Highlight; fill: Highlight; }
+  .bars .bar, .mini-board span::before { forced-color-adjust: none; background: CanvasText; fill: CanvasText; opacity: 1; }
+  .bars .hi .bar { background: Highlight; fill: Highlight; }
   .steps button[aria-current="step"], .ideas button[aria-pressed="true"] { border: 3px solid Highlight; }
   .mini-board .target { outline-color: Highlight; }
   .mini-board .guessed { box-shadow: none; text-decoration: underline 3px; }

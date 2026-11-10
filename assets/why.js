@@ -144,49 +144,6 @@ function clueWalk(host, data) {
       el("div", {}, el("ul", { class: "ideas", "aria-label": "Clue ideas" }, ideaItems.map((x) => el("li", {}, x.button))), reason)));
 }
 
-// ---------- speed: one dot per clue turn ----------
-// Dots that would overlap are stacked up and down from the row's centre line (a small beeswarm).
-function swarm(xs, gap) {
-  const placed = [];
-  return xs.map((x) => {
-    for (let k = 0; ; k++) {
-      const dy = (k % 2 ? 1 : -1) * Math.ceil(k / 2) * gap;
-      if (placed.every((p) => Math.hypot(p.x - x, p.dy - dy) >= gap)) { placed.push({ x, dy }); return dy; }
-    }
-  });
-}
-
-function strip(host, data) {
-  const rows = [
-    { label: "Before", sub: `${data.before.length} turns`, values: data.before },
-    { label: "After", sub: `${data.after.length} turns`, values: data.after },
-  ];
-  const draw = () => {
-    const W = Math.max(300, host.clientWidth), left = 74, right = 16, top = 26, rowH = 76, H = top + rows.length * rowH + 26;
-    const max = 40, x = (s) => left + (s / max) * (W - left - right);
-    const g = svg("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
-      "aria-label": `Time to test the clue ideas, per clue turn. Before the fix: ${data.before.length} turns, half near 7 seconds and half near 33. After: ${data.after.length} turns, all 5 to 8 seconds.` });
-    for (let t = 0; t <= max; t += 10) {
-      g.append(svg("line", { class: "grid", x1: x(t), x2: x(t), y1: top - 4, y2: H - 22 }),
-        svg("text", { class: "tick", x: x(t), y: H - 6, "text-anchor": "middle" }, `${t} s`));
-    }
-    g.append(svg("text", { class: "note", x: x(7), y: 12, "text-anchor": "middle" }, "normal"),
-      svg("text", { class: "note", x: Math.min(x(33.5), W - right), y: 12, "text-anchor": "end" }, "one reply ran away"));
-    rows.forEach((r, ri) => {
-      const cy = top + ri * rowH + rowH / 2;
-      g.append(svg("text", { class: "rowlabel", x: 0, y: cy - 2 }, r.label), svg("text", { class: "tick", x: 0, y: cy + 13 }, r.sub));
-      const xs = r.values.map(x);
-      const order = xs.map((_, i) => i).sort((a, b) => xs[a] - xs[b]);
-      const dys = swarm(order.map((i) => xs[i]), 11);
-      order.forEach((i, k) => g.append(svg("circle", { class: `dot${r.values[i] > 20 ? " slow" : ""}`, cx: xs[i], cy: cy + dys[k], r: 5 })));
-    });
-    host.replaceChildren(g);
-  };
-  draw();
-  new ResizeObserver(draw).observe(host);
-}
-
-
 // ---------- wire up ----------
 const $ = (s) => document.querySelector(s);
 if ($("#fig-progress")) {
@@ -201,8 +158,7 @@ if ($("#fig-progress")) {
     if (!res.ok) throw new Error(res.status);
     const data = await res.json();
     clueWalk($("#fig-clue .chart"), data.clue);
-    strip($("#fig-speed .chart"), data.speed);
   } catch {
-    for (const id of ["#fig-clue", "#fig-speed"]) $(`${id} .chart`).replaceChildren(el("p", { class: "fig-error" }, "This figure's data didn't load. Reload the page to try again."));
+    $("#fig-clue .chart").replaceChildren(el("p", { class: "fig-error" }, "This figure's data didn't load. Reload the page to try again."));
   }
 }

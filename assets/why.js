@@ -22,7 +22,7 @@ const list = (words) => (words.length > 1 ? `${words.slice(0, -1).join(", ")} an
 
 // ---------- bar rows: progress, models, games, cost ----------
 // rows: {label, note?, value | [lo, hi], text, hi?} or "sep". max: the axis end. ticks: [value, label] pairs.
-// Each row reads as label, note, value; the bar itself is decoration, and every chart has a table too.
+// Each row reads as label, note, value; the bar itself is decoration.
 function bars(host, rows, { max, ticks }) {
   const grid = el("div", { class: "bars" });
   for (const r of rows) {
@@ -39,7 +39,6 @@ function bars(host, rows, { max, ticks }) {
     el("div", {}));
   host.replaceChildren(grid);
 }
-const rowsOf = (rows) => rows.filter((r) => r !== "sep").map((r) => [r.note ? `${r.label} (${r.note})` : r.label, r.text]);
 
 // Partners in the order I built them (selected milestones), each against the same reference player.
 const PROGRESS = [
@@ -188,33 +187,22 @@ function strip(host, data) {
   new ResizeObserver(draw).observe(host);
 }
 
-function table(host, head, rows) {
-  host.after(el("details", {}, el("summary", {}, "Show as a table"),
-    el("table", {}, el("thead", {}, el("tr", {}, head.map((h, i) => el("th", { class: i ? "num" : "" }, h)))),
-      el("tbody", {}, rows.map((r) => el("tr", {}, r.map((c, i) => el("td", { class: i ? "num" : "" }, c))))))));
-}
 
 // ---------- wire up ----------
 const $ = (s) => document.querySelector(s);
 if ($("#fig-progress")) {
   const fifteen = [0, 5, 10, 15].map((v) => [v, String(v)]);
   bars($("#fig-progress .chart"), PROGRESS, { max: 15, ticks: fifteen });
-  table($("#fig-progress .chart"), ["Partner, in build order", "Agents found (of 15)"], rowsOf(PROGRESS));
   bars($("#fig-models .chart"), MODELS, { max: 15, ticks: fifteen });
-  table($("#fig-models .chart"), ["Model giving the clues", "Agents found (of 15)"], rowsOf(MODELS));
   $("#fig-games .stat-glove").textContent = SELF_PLAY_GLOVE;
   bars($("#fig-games .chart"), GAMES, { max: 500, ticks: [0, 100, 200, 300, 400, 500].map((v) => [v, String(v)]) });
-  table($("#fig-games .chart"), ["Kind of game", "Games"], [["Self-play, GloVe partners (on a CPU)", SELF_PLAY_GLOVE], ...rowsOf(GAMES)]);
   bars($("#fig-cost .chart"), COST, { max: 2, ticks: [[0, "$0"], [0.5, "$0.50"], [1, "$1"], [1.5, "$1.50"], [2, "$2"]] });
-  table($("#fig-cost .chart"), ["Partner", "US$ per game"], rowsOf(COST));
   try {
     const res = await fetch(new URL(`why-data.json${new URL(import.meta.url).search}`, import.meta.url));
     if (!res.ok) throw new Error(res.status);
     const data = await res.json();
     clueWalk($("#fig-clue .chart"), data.clue);
     strip($("#fig-speed .chart"), data.speed);
-    table($("#fig-speed .chart"), ["Clue turn", "Seconds to test its ideas"],
-      [...data.speed.before.map((s, i) => [`Before, turn ${i + 1}`, s.toFixed(1)]), ...data.speed.after.map((s, i) => [`After, turn ${i + 1}`, s.toFixed(1)])]);
   } catch {
     for (const id of ["#fig-clue", "#fig-speed"]) $(`${id} .chart`).replaceChildren(el("p", { class: "fig-error" }, "This figure's data didn't load. Reload the page to try again."));
   }

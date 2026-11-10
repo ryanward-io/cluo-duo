@@ -15,10 +15,10 @@
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="The Cluo Duo board with the clue PEST 2, pointing at SPIDER and RACCOON">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="stylesheet" href="assets/app.css?v=202611102100">
-  <script src="assets/theme.js?v=202611102100"></script>
-  <script src="assets/why.js?v=202611102100" type="module"></script>
-  <script src="assets/app.js?v=202611102100" type="module"></script>
+  <link rel="stylesheet" href="assets/app.css?v=202611102200">
+  <script src="assets/theme.js?v=202611102200"></script>
+  <script src="assets/why.js?v=202611102200" type="module"></script>
+  <script src="assets/app.js?v=202611102200" type="module"></script>
 </head>
 <body>
   <header class="site">
@@ -140,20 +140,17 @@
 
     <div id="tab-why" role="tabpanel" aria-labelledby="tab-btn-why" class="panel prose" hidden>
       <h2>Why I built it</h2>
-      <p class="lede">TL;DR: I wanted a portfolio piece that uses an LLM. I built an AI partner for a fun co-op word game, ultimately using Google's open model Gemma 4 running on its own GPU.</p>
+      <p class="lede">TL;DR: I wanted a portfolio piece that incorporates an LLM so I built an AI partner for a fun co-op word game, ultimately using Google's open model Gemma 4 running on its own GPU.</p>
 
       <h3>I love board games</h3>
-      <p>I've always loved board games, especially cooperative board games like Codenames Duet where you work with your friend to solve a common goal. Most games are adversarial. I do enjoy them, but teamwork is better for me than going head to head and straining friendships.<sup><span aria-hidden="true">*</span><span class="visually-hidden"> (see footnote)</span></sup></p>
-      <p class="footnote"><sup aria-hidden="true">*</sup><span class="visually-hidden">Footnote: </span> The rise of fun co-op video games like It Takes Two and Big Walk backs this up.</p>
-      <p>In 2021, I had the idea to use some of the latest word analysis and AI tools to make an AI partner for you to play with. I worked on it, but it was a slog and ended up sitting on the shelf.</p>
-      <p>Enter mid-2026 and Claude's Opus 5.5. Since that first attempt, generative transformer tech has come a long way and I wanted to try again. So I picked up my old repo and kept going. I built the first full working game in about 3 days, and have been tinkering with it since then.</p>
-      <p>I also wanted an AI project people could actually interact with, and a game is a closed world where I can run thousands of games and measure changes precisely.</p>
+      <p>I've always loved board games. Cooperative board games like Codenames Duet are especially fun where you work towards a friend to solve a common goal. I enjoy adversarial games too, but teamwork is better for me than straining friendships.</p>
+      <p>In 2021, I wanted to use some of the latest word analysis and AI tools to make an AI partner to play with. I worked on it, but it was a slog and ended up unfinished.</p>
+      <p>Enter mid-2026 and Claude's Opus 5.5. Since that first attempt, genAI tech has come a long way and I wanted to try again. So I picked up my old repo and kept going. I built the first full working game in about 3 days, and have been tinkering since then.</p>
 
       <h3>The problem</h3>
-      <p>In theory, word association games should be a perfect problem for an LLM. But it wasn't just about creating word associations, it's about making the LLM consider theory of mind, i.e. how the other player is going to read the clues, and whether they'd read it as intended.</p>
+      <p>Word association games should be a perfect problem for an LLM. But the game isn't just about creating word associations, it's about theory of mind: how is the other player going to read the clues you give?</p>
       <p>Testing was also kind of tricky, as playing a model against itself tended to overestimate how successful it really was, as they see the world in the same way (even if information was hidden).</p>
-      <p>This was especially true for the non-LLM GloVe model, as both copies share identical word vectors, so it could score very well against itself without being any good with a person or other model.</p>
-      <p>To solve this, partners were tested with a fixed outside player (Claude Sonnet, following a written player guide, separate from the partner's own prompt) on the same 8 boards. It still probably slightly favours Sonnet as a player, given Sonnet as a partner scored the same on average as Gemma, but won more games.</p>
+      <p>To solve this, I ran about 18,000 automated games with self-playing AI to tune the Basic model and find the best player guide for the Advanced model.</p>
 
       <figure class="fig" id="fig-games">
         <h4 class="fig-title">About 18,000 games of testing</h4>
@@ -166,8 +163,14 @@
       </figure>
 
       <h3>How the partners evolved</h3>
-      <p>I started with a pure random baseline, before fleshing out the GloVe + Bayesian partner, then trialling different LLMs and eventually landing on Google's Gemma. While Sonnet would cost less per game than the GPU for a single player, I get $30 of credits for free with Modal each month so I may as well use them, and running an open model myself was part of the learning rather than just plugging in an API key.</p>
-      <p>Opus at max effort played well but was slow (about 2 minutes a clue) and cost over $1 a game. Not the right fit for a personal site, so Advanced stays with Gemma.</p>
+      <p>I started with a random baseline, before fleshing out the GloVe + Bayesian partner, then trialling different LLMs and eventually finding Google's Gemma to be the best small model performer. Sonnet would cost less per game than the GPU for a single player, but I get $30 of credits for free with Modal each month so I may as well use them. Running an open model myself was part of the learning too, rather than just plugging in an API key.</p>
+      <p>Opus 5.5 at max effort played well but was slow (about 2 minutes a clue) and cost over $1 a game. Not the right fit for a personal site, so Advanced stays with Gemma.</p>
+
+      <figure class="fig" id="fig-models">
+        <h4 class="fig-title">Bigger wasn't better: Gemma 4 31B tied a 120B model</h4>
+        <div class="chart"></div>
+        <figcaption>Each model gives the clues while GloVe checks them and guesses, 8 games each, late Oct 2026. gpt-oss-120b tied Gemma and hit fewer assassins, but only about 5B of its 120B parameters are active at a time.</figcaption>
+      </figure>
 
       <figure class="fig" id="fig-cost">
         <h4 class="fig-title">A lone player on the GPU costs more than Claude Sonnet would</h4>
@@ -199,7 +202,7 @@
             <h4>Your browser</h4>
             <p class="where">ryanward.dev/cluo-duo · static files on GitHub Pages</p>
             <ul>
-              <li>The board, menus and post-game log: plain HTML, CSS and JavaScript, no framework</li>
+              <li>Plain HTML, CSS and JavaScript</li>
               <li>Only ever sees your side of the game</li>
             </ul>
           </div>
@@ -208,10 +211,10 @@
             <h4>Game server</h4>
             <p class="where">Modal app “cluo-duo” · FastAPI on a CPU container, scales to zero</p>
             <ul>
-              <li>The rules, as pure Python functions, shared with the test scripts</li>
+              <li>The rules, as Python functions, shared with the test scripts</li>
               <li>The Basic partner runs here (GloVe vectors for 50,000 words)</li>
               <li>Game state, progress and daily caps on GPU games and warm-ups in a Modal Dict</li>
-              <li>A monthly budget: Advanced switches off before the GPU can use up the month's credit</li>
+              <li>Advanced forced off before the GPU can use up the month's credit</li>
               <li>If the GPU fails, Basic covers the move</li>
             </ul>
           </div>
@@ -221,7 +224,7 @@
             <p class="where">Modal app “cluo-duo-llm” · one NVIDIA L40S GPU</p>
             <ul>
               <li>Gemma 4 31B (FP8) served by vLLM</li>
-              <li>Replies forced into JSON: the words it targets or guesses must be on the board; clues are checked against the rules afterwards</li>
+              <li>Replies forced into JSON, with clues checked against the rules</li>
               <li>Sleeps after 5 idle minutes; at most one GPU, whatever the traffic</li>
               <li>Weights, compiled graphs and kernels cached on Modal Volumes, so waking up takes about 2 minutes (1 min 52 s when last timed, 9 Nov)</li>
             </ul>
@@ -231,7 +234,7 @@
             <p class="where">My machine · the same game code</p>
             <ul>
               <li>Claude Sonnet, via Claude Code, plays side A as a fixed reference player, through a command-line version of the game</li>
-              <li>Each partner version plays the same 8 boards against it (a few early ones, the first 4)</li>
+              <li>Each partner version plays the same 8 boards against it</li>
               <li>Self-play and timing probes call the same model server as /cluo-duo</li>
             </ul>
           </div>
@@ -242,25 +245,18 @@
       <ul>
         <li>I had figured a bigger model would be better, but gpt-oss-120b only tied the 31B Gemma (it did hit fewer assassins).</li>
         <li>Letting the model rehearse as the guesser seemed to make its clues safer (see Inside one clue above).</li>
-        <li>I could experiment pretty fast by setting some guardrails but then letting Opus iterate on the reference player's guide. It got up to v10, but results had plateaued, so I kept v9.</li>
+        <li>I could experiment fast by setting some guardrails before letting Opus iterate on the reference player's guide. It got up to v10, but results had plateaued, so I kept v9.</li>
         <li>Often I could get better performance by pointing Opus at something unsatisfying and telling it to improve it. It didn't seem to do much of this step by itself, and needed the prompting.</li>
-        <li>Given the time and cost, I couldn't run thousands of experiments so I used smaller samples (8 boards) and checked the key comparisons with paired tests (a sign test on each board, plus a bootstrap interval).</li>
+        <li>Given the time and cost, I didn't run thousands of experiments so I used smaller samples (8 boards) and checked the key comparisons with paired tests (a sign test on each board, plus a bootstrap interval).</li>
       </ul>
-
-      <figure class="fig" id="fig-models">
-        <h4 class="fig-title">Bigger wasn't better: Gemma 4 31B tied a 120B model</h4>
-        <div class="chart"></div>
-        <figcaption>Each model gives the clues while GloVe checks them and guesses, 8 games each, late Oct 2026. gpt-oss-120b tied Gemma and hit fewer assassins, but only about 5B of its 120B parameters are active at a time.</figcaption>
-      </figure>
 
       <h3>Making it faster</h3>
       <ul>
-        <li>About half of Gemma's turns were taking over 30 seconds, which ended up being a weird quirk in how it wrote its JSON replies: one test reply would pad itself with blank space until it hit the token limit.</li>
-        <li>The fix was a server setting Opus found, compact JSON with no whitespace so it could no longer ramble, and testing its ideas went from a max of 36 seconds to ~6.</li>
+        <li>About half of Gemma's turns took over 30 seconds, which ended up being a weird quirk in how it wrote its JSON replies: one test reply would pad itself with blank space until it hit the token limit.</li>
+        <li>The fix was forcing compact JSON with no whitespace so it could no longer ramble, and testing its ideas went from a max of 36 seconds to ~6.</li>
         <li>I tried other things to improve response speed like cutting from 8 clue ideas to 6. It saved about 2s, but the testing looked worse, so I kept 8.</li>
-        <li>I also added some better UX alongside it: the GPU starts waking the moment the Advanced button is pressed, the board shows straight away while the GPU wakes up so players can start absorbing the words, and live progress messages say what the AI is doing ("testing its 8 clue ideas: 5 of 8 done…").</li>
+        <li>I also added some better UX alongside it: the GPU starts waking the moment the Advanced button is pressed, the board shows straight away while the GPU wakes up so players can start absorbing the words, and live progress messages say what the AI is doing.</li>
       </ul>
-
 
       <h3>LLM cost and safety safeguards</h3>
       <ul>

@@ -15,10 +15,10 @@
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="The Cluo Duo board with the clue PEST 2, pointing at SPIDER and RACCOON">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="stylesheet" href="assets/app.css?v=202611102200">
-  <script src="assets/theme.js?v=202611102200"></script>
-  <script src="assets/why.js?v=202611102200" type="module"></script>
-  <script src="assets/app.js?v=202611102200" type="module"></script>
+  <link rel="stylesheet" href="assets/app.css?v=202611102230">
+  <script src="assets/theme.js?v=202611102230"></script>
+  <script src="assets/why.js?v=202611102230" type="module"></script>
+  <script src="assets/app.js?v=202611102230" type="module"></script>
 </head>
 <body>
   <header class="site">
@@ -149,8 +149,7 @@
 
       <h3>The problem</h3>
       <p>Word association games should be a perfect problem for an LLM. But the game isn't just about creating word associations, it's about theory of mind: how is the other player going to read the clues you give?</p>
-      <p>Testing was also kind of tricky, as playing a model against itself tended to overestimate how successful it really was, as they see the world in the same way (even if information was hidden).</p>
-      <p>To solve this, I ran about 18,000 automated games with self-playing AI to tune the Basic model and find the best player guide for the Advanced model.</p>
+      <p>To solve this, every version played the same 8 boards with an outside player (Claude Sonnet, following its own guide), to tune the Basic model and find the best instructions for the Advanced model.</p>
 
       <figure class="fig" id="fig-games">
         <h4 class="fig-title">About 18,000 games of testing</h4>

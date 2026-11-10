@@ -230,7 +230,7 @@ async function act(path, body, thinking = "Your partner is thinking…") {
     if (!toldBoot) { toldBoot = true; announce("Starting your partner's GPU. This usually takes about 2 minutes."); }
     renderAction(`Starting your partner's GPU: usually about 2 minutes (${clock(boot)} so far).`,
       boot > GPU_SLOW_SECS
-        ? "This is taking longer than usual. You can keep waiting, or go back to the Menu and pick Basic."
+        ? "This is taking longer than usual. You can keep waiting, or exit the game and pick Basic."
         : "The GPU switches off when nobody's playing. Take a look at the board while it starts.",
       bootBar(boot));
   }, 1000);
@@ -469,7 +469,8 @@ function renderThoughts() {
 
 function renderAction(message, note, extra) {
   const box = $("#action");
-  if (message) { box.replaceChildren(el("p", {}, message), extra, ...(note ? [el("p", { class: "muted" }, note)] : [])); return; }
+  // replaceChildren would print a missing extra as "undefined" (or false as "false"), so drop empty slots.
+  if (message) { box.replaceChildren(...[el("p", {}, message), extra, note && el("p", { class: "muted" }, note)].filter(Boolean)); return; }
   const s = state;
   if (s.phase === "over") {
     box.replaceChildren(
@@ -533,7 +534,7 @@ function renderAction(message, note, extra) {
 
 function quitToMenu() {
   const inProgress = state && state.phase !== "over";
-  if (inProgress && !confirm("Leave this game and go back to the menu? You won't be able to come back to it.")) return;
+  if (inProgress && !confirm("Exit this game? You won't be able to come back to it.")) return;
   generation += 1;
   busy = false;
   save(null);
@@ -622,11 +623,15 @@ loadSetup();
 
 document.addEventListener("visibilitychange", () => { if (!document.hidden && !busy) document.title = TITLE; });
 
-$("#tips").checked = tipsOn();
-$("#tips").addEventListener("change", (e) => {
-  try { localStorage.setItem(TIPS_KEY, e.target.checked ? "1" : "0"); } catch (_) { /* storage blocked */ }
-  if (state) render();
-});
+// "Show odds" appears in the setup options and above the board; both boxes share one saved setting.
+for (const box of [$("#tips"), $("#tips-game")]) {
+  box.checked = tipsOn();
+  box.addEventListener("change", (e) => {
+    try { localStorage.setItem(TIPS_KEY, e.target.checked ? "1" : "0"); } catch (_) { /* storage blocked */ }
+    $("#tips").checked = $("#tips-game").checked = e.target.checked;
+    if (state) render();
+  });
+}
 
 $("#start").addEventListener("click", () => {
   const first = document.querySelector('input[name="first"]:checked').value;

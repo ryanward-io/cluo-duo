@@ -3,7 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from cluoduo import api, game
+from cluoduo import api, game, players
 from cluoduo.store import MemoryStore
 
 
@@ -81,7 +81,7 @@ def test_monthly_budget_over_limit(gpu_random):
     c = TestClient(api.create_app(MemoryStore(), warm_up=calls.append, usage=lambda: 27.0))
     r = c.post("/api/games", json={"partner": "random", "first": "human"})
     assert r.status_code == 429 and "this month" in r.json()["detail"]
-    assert c.post("/api/warm", json={"partner": "random"}).json() == {"ok": False}
+    assert c.post("/api/warm", json={"partner": "random"}).json() == {"ok": False, "reason": "monthly"}
     assert calls == []
 
 
@@ -112,3 +112,94 @@ def test_monthly_budget_lookup_failure_allows_play(gpu_random):
 def test_basic_unaffected_by_monthly_budget():
     c = TestClient(api.create_app(MemoryStore(), usage=lambda: 100.0))
     assert c.post("/api/games", json={"partner": "glove-rank", "first": "human"}).status_code == 200
+
+
+def test_warm_says_daily_cap(gpu_random, monkeypatch):
+    monkeypatch.setattr(api, "GPU_GAMES_PER_DAY", 0)
+    assert client().post("/api/warm", json={"partner": "random"}).json() == {"ok": False, "reason": "daily"}
+
+
+def test_budget_running_out_mid_game_switches_to_basic(gpu_random, monkeypatch):
+    """A game already using the GPU can't keep it once the month's budget is spent: Basic plays on."""
+    played_by = []
+
+    class Tracker(players.RandomPlayer):
+        def __init__(self, seed=None, label="gpu"):
+            super().__init__(seed)
+            self.label = label
+
+        def give_clue(self, view):
+            played_by.append(self.label)
+            return super().give_clue(view)
+
+        def guess(self, view):
+            played_by.append(self.label)
+            return super().guess(view)
+
+    monkeypatch.setitem(api.PLAYERS, "random", lambda seed=None: Tracker(seed, "gpu"))
+    monkeypatch.setitem(api.PLAYERS, "basic-fake", lambda seed=None: Tracker(seed, "basic"))
+    monkeypatch.setattr(api, "BUDGET_FALLBACK", "basic-fake")
+    dollars = [10.0]
+    store = MemoryStore()
+    c = TestClient(api.create_app(store, allow_local=True, usage=lambda: dollars[0]))  # local: the seed fixes the board
+
+    def a_clue(view):
+        return players.RandomPlayer(1).give_clue(view)[0]
+
+    s = c.post("/api/games", json={"partner": "random", "first": "human", "seed": 11}).json()
+    r = c.post(f"/api/games/{s['id']}/clue", json={"word": a_clue(s), "number": 1})
+    assert r.status_code == 200, r.text
+    s = r.json()
+    assert "gpu" in played_by  # the partner's guesses used the "GPU", and the game is now counted
+    dollars[0] = 28.0
+    store.put(store.get(api.USAGE) | {"t": 0})  # time for a fresh read, which finds the budget spent
+    played_by.clear()
+    for _ in range(40):  # finish the partner's turn, then give a clue so the partner has to guess
+        if s["phase"] == "over":
+            break
+        if s["phase"] == "guess" and s["clue"]["giver"] == "b":
+            i = next(i for i, f in enumerate(s["found"]) if not f)
+            s = c.post(f"/api/games/{s['id']}/guess", json={"index": i}).json()
+        elif s["phase"] == "clue" and s["giver"] == "a":
+            s = c.post(f"/api/games/{s['id']}/clue", json={"word": a_clue(s), "number": 1}).json()
+            break
+    assert played_by and set(played_by) == {"basic"}
+
+
+def test_failed_lookup_retries_later_not_every_request(gpu_random):
+    reads = []
+
+    def broken():
+        reads.append(1)
+        raise RuntimeError("billing unavailable")
+
+    c = TestClient(api.create_app(MemoryStore(), usage=broken))
+    for _ in range(3):
+        assert c.post("/api/games", json={"partner": "random", "first": "human"}).status_code == 200
+    assert len(reads) == 1
+
+
+def test_stale_usage_figure_turns_advanced_off(gpu_random):
+    store = MemoryStore()
+    store.put({"id": api.USAGE, "t": 0, "read_at": 0, "dollars": 5.0})  # read long ago, lookups failing since
+
+    def broken():
+        raise RuntimeError("billing unavailable")
+
+    c = TestClient(api.create_app(store, usage=broken))
+    assert c.post("/api/games", json={"partner": "random", "first": "human"}).status_code == 429
+
+
+def test_near_the_limit_rereads_more_often(gpu_random):
+    import time as _time
+    reads = []
+    store = MemoryStore()
+    store.put({"id": api.USAGE, "t": _time.time() - api.USAGE_NEAR_MAX_AGE - 1, "read_at": _time.time() - 700, "dollars": 25.0})
+
+    def usage():
+        reads.append(1)
+        return 25.5
+
+    c = TestClient(api.create_app(store, usage=usage))
+    c.post("/api/games", json={"partner": "random", "first": "human"})
+    assert reads == [1]  # $25 is within $3 of $27, so a 10-minute-old figure is re-read

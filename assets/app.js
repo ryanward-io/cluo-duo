@@ -601,7 +601,11 @@ for (const input of document.querySelectorAll('input[name="partner"]')) {
     const status = input.closest(".partner-card").querySelector(".status");
     const r = await call("/api/warm", { partner: input.value }).catch(() => null);
     if (!r) return;
-    if (!r.ok) { status.textContent = "Unavailable for the rest of today. Please pick Basic."; return; }
+    if (!r.ok) {
+      status.textContent = r.reason === "monthly" ? "Unavailable for the rest of this month. Please pick Basic."
+        : "Unavailable for the rest of today. Please pick Basic.";
+      return;
+    }
     if (Date.now() - warmedAt < GPU_AWAKE_MS) return; // already waking
     warmedAt = Date.now();
     status.textContent = "Starting up now: usually ready in about 2 minutes.";

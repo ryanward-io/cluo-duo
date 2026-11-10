@@ -35,6 +35,7 @@ class NewGame(BaseModel):
 
 # GPU-backed partners: each new game may wake a GPU, so cap them per day (UTC) to protect the credit.
 GPU_PARTNERS = {"smart": "Gemma31"}
+BUDGET_FALLBACK = "glove-rank"  # Basic, which plays a GPU partner's moves once the monthly budget is spent
 PROGRESS = "__progress__"  # store key prefix for a GPU partner's current step
 GPU_SEEN = "__gpu_seen__"  # when the GPU partner last answered anyone
 GPU_AWAKE_SECONDS = 4 * 60  # the GPU sleeps 5 minutes after its last call; allow a minute's margin
@@ -44,11 +45,17 @@ GPU_GAMES_PER_DAY = 40
 GPU_WARMS_PER_DAY = 40
 LAST_WARM = "__last_warm__"
 # Modal's $30 usage limit stops the whole workspace, Basic included. So the server turns Advanced off
-# once this month's usage reaches $27, leaving the rest for the CPU app. Modal's figures trail by up to
-# an hour and the GPU costs about $2 an hour, so usage can overshoot $27 a little but not reach $30.
+# once this month's usage reaches $27, leaving the rest for the CPU app. The check runs before every GPU
+# move, not just new games, so games already under way switch to Basic too. Modal's figures trail by up
+# to an hour and the GPU costs about $2 an hour; within $3 of the limit the figure is re-read every
+# 10 minutes, so usage can overshoot $27 a little but not reach $30.
 GPU_MONTHLY_USAGE_LIMIT = 27.0
-USAGE = "__usage__"  # this month's usage in dollars, and when it was read
-USAGE_MAX_AGE = 60 * 60  # re-read Modal's figure at most once an hour
+USAGE = "__usage__"  # this month's usage in dollars, when it was read, and when to check again
+USAGE_MAX_AGE = 60 * 60  # re-read Modal's figure at most once an hour...
+USAGE_NEAR = 3.0  # ...or every USAGE_NEAR_MAX_AGE once within this many dollars of the limit
+USAGE_NEAR_MAX_AGE = 10 * 60
+USAGE_RETRY = 10 * 60  # after a failed lookup, wait this long before trying again
+USAGE_STALE = 6 * 60 * 60  # a figure this old (lookups keep failing) turns Advanced off, to be safe
 DAILY_CAP = "The Advanced partner has had its games for today. Please try Basic, or come back tomorrow."
 MONTHLY_CAP = "The Advanced partner has used its budget for this month. Please try Basic, or come back next month."
 
@@ -110,6 +117,10 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None, usage=None
     def partner_plays(state: game.State) -> game.State:
         player = partner_for(state)
         gpu = state.get("partner") in GPU_PARTNERS and owes_move(state)
+        if gpu and state.get("gpu_counted") and over_budget():
+            # The month's GPU budget ran out mid-game: Basic plays the rest of this game's moves.
+            player = PLAYERS[BUDGET_FALLBACK](seed=state["seed"] % 2**31 + len(state["history"]))
+            gpu = False
         if gpu and not state.get("gpu_counted"):
             # Count a GPU game when it first needs the GPU, so games that never get that far can't use up the day.
             gpu_allowed(state["partner"])
@@ -163,15 +174,23 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None, usage=None
     def over_budget() -> bool:
         if usage is None:
             return False
+        now = time.time()
         record = store.get(USAGE)
-        if record is None or time.time() - record["t"] > USAGE_MAX_AGE:
+        near = record is not None and record.get("dollars") is not None \
+            and record["dollars"] >= GPU_MONTHLY_USAGE_LIMIT - USAGE_NEAR
+        max_age = USAGE_NEAR_MAX_AGE if near else USAGE_MAX_AGE
+        if record is None or now - record["t"] > max_age:
             try:
-                record = {"id": USAGE, "t": time.time(), "dollars": float(usage())}
-                store.put(record)
-            except Exception:
-                # Billing lookup failed: keep the last figure, or allow play. The daily caps and Modal's own $30 limit still apply.
-                if record is None:
-                    return False
+                record = {"id": USAGE, "t": now, "read_at": now, "dollars": float(usage())}
+            except Exception as e:
+                # Keep the last figure and try again in a few minutes, rather than on every request.
+                print(f"Monthly usage lookup failed: {e!r}")
+                record = (record or {"id": USAGE, "dollars": None}) | {"t": now - max_age + USAGE_RETRY}
+            store.put(record)
+        if record.get("dollars") is None:
+            return False  # never read yet: allow play; the daily caps and Modal's own $30 limit still apply
+        if now - record.get("read_at", record["t"]) > USAGE_STALE:
+            return True  # lookups have been failing for hours: switch Advanced off rather than guess
         return record["dollars"] >= GPU_MONTHLY_USAGE_LIMIT
 
     def gpu_allowed(partner: str) -> None:
@@ -184,8 +203,12 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None, usage=None
     @app.post("/api/warm")
     def warm(body: Warm) -> dict:
         """Called when a player selects a GPU partner, so the GPU boots while they read the menu."""
-        if body.partner not in GPU_PARTNERS or gpu_games_today(body.partner) >= GPU_GAMES_PER_DAY or over_budget():
+        if body.partner not in GPU_PARTNERS:
             return {"ok": False}
+        if gpu_games_today(body.partner) >= GPU_GAMES_PER_DAY:
+            return {"ok": False, "reason": "daily"}  # the page says which cap, so it can say when to come back
+        if over_budget():
+            return {"ok": False, "reason": "monthly"}
         now = time.time()
         recent = max((store.get(GPU_SEEN) or {}).get("t", 0), (store.get(LAST_WARM) or {}).get("t", 0))
         if now - recent < GPU_AWAKE_SECONDS:

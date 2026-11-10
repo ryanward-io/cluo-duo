@@ -15,9 +15,9 @@
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="The Cluo Duo board with the clue PEST 2, pointing at SPIDER and RACCOON">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="stylesheet" href="assets/app.css?v=202611102000">
-  <script src="assets/why.js?v=202611102000" type="module"></script>
-  <script src="assets/app.js?v=202611102000" type="module"></script>
+  <link rel="stylesheet" href="assets/app.css?v=202611102030">
+  <script src="assets/why.js?v=202611102030" type="module"></script>
+  <script src="assets/app.js?v=202611102030" type="module"></script>
 </head>
 <body>
   <header class="site">
@@ -153,10 +153,13 @@
       <p>To solve this, partners were tested with a fixed outside player (Claude Sonnet, following a written player guide, separate from the partner's own prompt) on the same 8 boards. It still probably slightly favours Sonnet as a player, given Sonnet as a partner scored the same on average as Gemma, but won more games.</p>
 
       <figure class="fig" id="fig-games">
-        <h4 class="fig-title">About 18,000 games, almost all quick self-play</h4>
-        <p class="fig-stat"><strong class="stat-glove">about 17,000</strong> games of GloVe partners playing themselves on a CPU, to tune Basic. The rest needed the GPU or Claude:</p>
-        <div class="chart"></div>
-        <figcaption>Self-play is fast, but two copies of the same partner think alike, so it flatters them. The games with Claude Sonnet as an outside player are the real test behind the results below.</figcaption>
+        <h4 class="fig-title">About 18,000 games of testing</h4>
+        <div class="stat-tiles">
+          <p><strong>18,000</strong> games played while building it, roughly</p>
+          <p><strong>208</strong> of them against an outside player, the real test</p>
+          <p><strong>20+</strong> partner versions, all tested on the same boards</p>
+        </div>
+        <figcaption>Most were quick GloVe self-play on a CPU (about 17,000), used to tune Basic. Self-play flatters a partner, so the outside-player games are the ones behind the results below.</figcaption>
       </figure>
 
       <h3>How the partners evolved</h3>

@@ -61,15 +61,8 @@ const MODELS = [
   { label: "Gemma 4 31B", note: "31B · Google · used live", value: 10.4, text: "10.4", hi: true },
 ];
 
-// Games played while building and testing. Reference and two-agent games are counted from
-// data/agent-games (boards 200-207: 208 reference incl. the 10 Nov rerun, 4 Opus self-play). Self-play counts are rebuilt
-// from session logs: evaluate.py and compare.py print their results and never saved them.
-const SELF_PLAY_GLOVE = "about 17,000";
-const GAMES = [
-  { label: "Self-play, LLM partners", note: "20 games per version, on the GPU", value: 400, text: "about 400" },
-  { label: "Two AI players", note: "mostly refining the player guide", value: 172, text: "172" },
-  { label: "Reference player + partner", note: "the games behind the results", value: 208, text: "208", hi: true },
-];
+// The games figure is plain HTML in index.html. Counts: reference games and partner versions from data/agent-games
+// (boards 200-207); self-play totals rebuilt from session logs, since evaluate.py and compare.py never saved results.
 
 // US$ per game. GPU: Modal's bill (see the caption). Claude: rough estimates from token use, not bills.
 const COST = [
@@ -150,8 +143,6 @@ if ($("#fig-progress")) {
   const fifteen = [0, 5, 10, 15].map((v) => [v, String(v)]);
   bars($("#fig-progress .chart"), PROGRESS, { max: 15, ticks: fifteen });
   bars($("#fig-models .chart"), MODELS, { max: 15, ticks: fifteen });
-  $("#fig-games .stat-glove").textContent = SELF_PLAY_GLOVE;
-  bars($("#fig-games .chart"), GAMES, { max: 500, ticks: [0, 100, 200, 300, 400, 500].map((v) => [v, String(v)]) });
   bars($("#fig-cost .chart"), COST, { max: 2, ticks: [[0, "$0"], [0.5, "$0.50"], [1, "$1"], [1.5, "$1.50"], [2, "$2"]] });
   try {
     const res = await fetch(new URL(`why-data.json${new URL(import.meta.url).search}`, import.meta.url));

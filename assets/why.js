@@ -99,7 +99,7 @@ function clueWalk(host, data) {
   let step = 0;
   let pick = chosen;
   const NOTES = [
-    `Gemma sees its own key: 9 agents (green dots) and 3 assassins (small squares). It brainstorms ${ideas.length} clue ideas, each aimed at one to three of its agents. Pick an idea to see its targets outlined on the board.`,
+    `Gemma sees its own key: 9 agents (green dots) and 3 assassins (skulls). It brainstorms ${ideas.length} clue ideas, each aimed at one to three of its agents. Pick an idea to see its targets outlined on the board.`,
     "For each idea, Gemma plays your side: it's given the board without the key and asked to guess, much as it guesses your clues. All the tests run at once. Underlined words are what it guessed.",
     `It picks the idea whose test found the most agents in a row, and the clue's number is that count. Only ${chosen.clue} got both its targets; MAMMAL was thrown out for leading straight to an assassin.`,
   ];

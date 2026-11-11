@@ -20,6 +20,7 @@ import argparse
 import json
 import subprocess
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -34,11 +35,12 @@ def load_games() -> dict[str, dict]:
     games: dict[str, dict] = {}
     vol = modal.Volume.from_name("cluo-duo-stats", create_if_missing=True)
     try:
-        for entry in vol.listdir("games"):
-            state = json.loads(b"".join(vol.read_file(entry.path)))
-            games[state["id"]] = state
+        paths = [e.path for e in vol.listdir("games")]
     except FileNotFoundError:
-        pass  # no snapshot yet
+        paths = []  # no snapshot yet
+    with ThreadPoolExecutor(16) as pool:  # one round trip per file, so fetch them side by side
+        for state in pool.map(lambda p: json.loads(b"".join(vol.read_file(p))), paths):
+            games[state["id"]] = state
     for key, state in modal.Dict.from_name("cluo-duo-games").items():
         if key.startswith("__") or not isinstance(state, dict):
             continue

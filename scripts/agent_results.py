@@ -86,7 +86,14 @@ REFERENCE |= {"ref + Smart, 10 turns": (range(200, 208), "smart-t10"),
               "ref + Advanced, trusting guesses + leftovers, 11 Nov round 1": (range(200, 208), "n1y"),
               "ref + Advanced to 10 Nov (cautious guesses), 11 Nov round 2": (range(200, 208), "n2y"),
               "ref + Advanced, trusting guesses, 11 Nov round 2": (range(200, 208), "n2z"),
-              "ref + Advanced, trusting guesses + leftovers, 11 Nov round 2": (range(200, 208), "n2x")}
+              "ref + Advanced, trusting guesses + leftovers, 11 Nov round 2": (range(200, 208), "n2x"),
+              # 11 Nov 2026 run 2 (tags p1x..p3y): live vs trust only, 24 games each
+              "ref + Advanced, trusting guesses, 11 Nov run 2 round 1": (range(200, 208), "p1y"),
+              "ref + Advanced, trusting guesses + leftover answer (live), 11 Nov run 2 round 1": (range(200, 208), "p1x"),
+              "ref + Advanced, trusting guesses, 11 Nov run 2 round 2": (range(200, 208), "p2x"),
+              "ref + Advanced, trusting guesses + leftover answer (live), 11 Nov run 2 round 2": (range(200, 208), "p2y"),
+              "ref + Advanced, trusting guesses, 11 Nov run 2 round 3": (range(200, 208), "p3y"),
+              "ref + Advanced, trusting guesses + leftover answer (live), 11 Nov run 2 round 3": (range(200, 208), "p3x")}
 
 
 def round_summary(name: str, seeds: range, tag: str = "") -> str:

@@ -52,14 +52,26 @@ VARIANTS = {
     "no-marks": (None, FIXED_BYSTANDER_NOTE, ".", True, 300),
 }
 # trust-long, plus a list of the partner's unfinished earlier clues and room for one extra guess on one
-LEFTOVER = {"trust-long-leftover"}
-VARIANTS["trust-long-leftover"] = VARIANTS["trust-long"]
+LEFTOVER = {"trust-long-leftover", "leftover-firm", "leftover-field"}
+for _v in LEFTOVER:
+    VARIANTS[_v] = VARIANTS["trust-long"]
 
 LEFTOVER_TAIL = (" UNFINISHED CLUES: when a turn ends on a bystander or a stop before all of a clue's targets "
                  "were found, those targets are probably still on the board. After your guesses for this clue, you "
                  "may add ONE extra guess: a word that clearly fits one of your partner's unfinished clues listed "
                  "above (the way a human player looks back at earlier clues). Only add it if the fit is clear; a loose "
                  "extra guess risks an ASSASSIN.")
+
+
+FIRM_TAIL = (" UNFINISHED CLUES: when a turn ends on a bystander or a stop before all of a clue's targets were "
+             "found, those targets are usually still on the board, and finding them costs no extra clue: this is how "
+             "good players catch up. After your guesses for this clue, ADD ONE EXTRA GUESS whenever one of the "
+             "unfinished clues above has a remaining word that clearly fits it (the clearer the better). Leave it out "
+             "only when no remaining word clearly fits any of them.")
+FIELD_TAIL = (" Then look back: when a turn ends on a bystander or a stop before all of a clue's targets were found, "
+              "those targets are usually still on the board, and finding them costs no extra clue. In 'leftover', name "
+              "the remaining word that most clearly fits one of the unfinished clues above; it is guessed after your "
+              "guesses for this clue. Write NONE only when no remaining word clearly fits any of them.")
 
 
 def unfinished(view: dict) -> str:
@@ -111,7 +123,7 @@ def messages(view: dict, variant: str) -> list[dict]:
     clue = view["clue"]
     extra = f"Your partner's unfinished earlier clues:\n{unfinished(view)}\n\n" if variant in LEFTOVER else ""
     if variant in LEFTOVER:
-        tail += LEFTOVER_TAIL
+        tail += {"leftover-firm": FIRM_TAIL, "leftover-field": FIELD_TAIL}.get(variant, LEFTOVER_TAIL)
     open_words = [w for i, w in enumerate(view["words"]) if game.can_guess(view, i)]
     return [
         {"role": "system", "content": RULES},
@@ -130,7 +142,11 @@ def schema(view: dict, variant: str) -> dict:
     open_words = [w for i, w in enumerate(view["words"]) if game.can_guess(view, i)]
     s = guess_schema(open_words, view["clue"]["number"])
     s["properties"]["reason"]["maxLength"] = VARIANTS[variant][4]
-    if variant in LEFTOVER:
+    if variant == "leftover-field":
+        s["properties"]["leftover"] = {"enum": open_words + ["NONE"],
+                                       "description": "a remaining word that clearly fits an unfinished earlier clue, or NONE"}
+        s["required"].append("leftover")
+    elif variant in LEFTOVER:
         s["properties"]["guesses"]["maxItems"] = min(len(open_words), max(view["clue"]["number"], 1) + 1)
     return s
 
@@ -146,7 +162,12 @@ def plan(view: dict, data: dict, variant: str) -> list[int]:
         if view["my_key"][i] == game.ASSASSIN and out and not VARIANTS[variant][3]:
             break
         out.append(i)
-    return out[:max(view["clue"]["number"], 1) + (variant in LEFTOVER)]
+    out = out[:max(view["clue"]["number"], 1) + (variant in LEFTOVER and variant != "leftover-field")]
+    if variant == "leftover-field":
+        i = index.get(str(data.get("leftover", "")).strip().upper())
+        if i is not None and i not in out and game.can_guess(view, i):
+            out.append(i)
+    return out
 
 
 # ---------- the decisions ----------

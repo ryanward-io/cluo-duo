@@ -111,12 +111,14 @@ class LLMPlayer:
 
     def __init__(self, seed: int | None = None, *, backend: Backend | None = None, server: str = "LLM",
                  thinking: bool = False, fallback: Any = None, short_tokens: int = 250, trust: bool = False,
-                 leftovers: bool = False, **_ignored):
+                 leftovers: str | None = None, **_ignored):
         self.backend = backend or modal_backend(server)
         self.short_tokens = short_tokens  # cap on guess and rehearsal replies (600 before 31 Oct)
         self.thinking = thinking
         self.trust = trust  # trusting guess prompt: own assassins only break ties (see guess_messages)
-        self.leftovers = leftovers  # one extra guess on the partner's unfinished earlier clues
+        # One extra guess on the partner's unfinished earlier clues: "field" asks for it in its own required
+        # answer (live since 11 Nov 2026); "extra" just allows one more word in the guess list (rarely used).
+        self.leftovers = leftovers
         self.seed = seed or 0
         self._fallback = fallback
         self._plan: tuple[tuple, list[int]] | None = None  # (turn key, remaining guesses) for the current clue
@@ -237,7 +239,7 @@ class LLMPlayer:
         data = self._ask(guess_messages(view, clue["word"], clue["number"], open_words,
                                         trust=self.trust, leftovers=self.leftovers),
                          guess_schema(open_words, clue["number"], reason_max=600 if self.trust else 300,
-                                      extra=int(self.leftovers)), "guess")
+                                      leftovers=self.leftovers), "guess")
         index = {w: i for i, w in enumerate(view["words"])}
         plan = []
         for w in data.get("guesses", []):
@@ -247,7 +249,10 @@ class LLMPlayer:
             if view["my_key"][i] == game.ASSASSIN and plan and not self.trust:
                 break  # my own assassin only ever as the first, clearest pick (lesson from the player guide)
             plan.append(i)
-        plan = plan[:max(clue["number"], 1) + int(self.leftovers)]
+        plan = plan[:max(clue["number"], 1) + (self.leftovers == "extra")]
+        leftover = index.get(str(data.get("leftover", "")).strip().upper()) if self.leftovers == "field" else None
+        if leftover is not None and leftover not in plan and game.can_guess(view, leftover):
+            plan.append(leftover)  # guessed only if every guess before it found an agent
         self.note(view, {"type": "guess", "reason": str(data.get("reason", "")),
                          "planned": [view["words"][i] for i in plan]})
         return plan
@@ -257,6 +262,10 @@ TRUST_TAIL = (". Trust your partner: they can see their own key and avoided clue
               "So if a word is clearly the best fit for the clue, guess it, even if it is an ASSASSIN on your own key. "
               "Your own key only breaks ties: when two words fit about equally well, prefer the one that is not an "
               "ASSASSIN on your key.")
+FIELD_TAIL = (" Then look back: when a turn ends on a bystander or a stop before all of a clue's targets were found, "
+              "those targets are usually still on the board, and finding them costs no extra clue. In 'leftover', name "
+              "the remaining word that most clearly fits one of the unfinished clues above; it is guessed after your "
+              "guesses for this clue. Write NONE only when no remaining word clearly fits any of them.")
 LEFTOVER_TAIL = (" UNFINISHED CLUES: when a turn ends on a bystander or a stop before all of a clue's targets "
                  "were found, those targets are probably still on the board. After your guesses for this clue, you "
                  "may add ONE extra guess: a word that clearly fits one of your partner's unfinished clues listed "
@@ -291,7 +300,7 @@ def unfinished_clues(view: dict) -> str:
 
 
 def guess_messages(view: dict, clue_word: str, number: int, open_words: list[str], own_key: bool = True,
-                   trust: bool = False, leftovers: bool = False) -> list[dict]:
+                   trust: bool = False, leftovers: str | None = None) -> list[dict]:
     """The guesser's prompt.
 
     Only my ASSASSINS are marked, not my whole key. With the whole key the model guessed its own
@@ -304,7 +313,9 @@ def guess_messages(view: dict, clue_word: str, number: int, open_words: list[str
     its own key. In a replay of 419 past guess turns (scripts/guess_replay.py), when the trusting
     model did guess one, it was the partner's agent 91% of the time; agents found per clue rose
     from 1.38 to 1.60 with no clear rise in assassin hits. `leftovers` adds the partner's unfinished
-    earlier clues and allows one extra guess on them.
+    earlier clues and one extra guess on them. Asking for it in a required "leftover" answer
+    ("field") got it offered in 25% of replayed turns against 11% for just allowing a longer list
+    ("extra"); 76% of the extras reached were agents, +0.09 agents per clue over trust alone.
     """
     tail = (TRUST_TAIL if trust else ", and avoid words that are ASSASSINS on your own key unless the clue clearly means them.") \
         if own_key else "."
@@ -318,14 +329,15 @@ def guess_messages(view: dict, clue_word: str, number: int, open_words: list[str
             "that are AGENTS on THEIR key. Words you can guess: " + ", ".join(open_words) + ".\n"
             f"Pick at most {max(number, 1)} word(s) most strongly linked to the clue, most confident first. "
             "A wrong guess can hit an ASSASSIN, so leave out words you are unsure of" + tail
-            + (LEFTOVER_TAIL if leftovers else "")
+            + {"field": FIELD_TAIL, "extra": LEFTOVER_TAIL}.get(leftovers or "", "")
         )},
     ]
 
 
-def guess_schema(open_words: list[str], number: int, reason_max: int = 300, extra: int = 0) -> dict:
-    """`reason_max` 300 cut Gemma's reasoning off mid-sentence; `extra` allows leftover guesses."""
-    return {
+def guess_schema(open_words: list[str], number: int, reason_max: int = 300, leftovers: str | None = None) -> dict:
+    """`reason_max` 300 cut Gemma's reasoning off mid-sentence; `leftovers` see guess_messages."""
+    extra = int(leftovers == "extra")
+    schema = {
         "type": "object",
         "properties": {
             "reason": {"type": "string", "maxLength": reason_max, "description": "one short sentence on what the clue most likely means"},
@@ -336,6 +348,11 @@ def guess_schema(open_words: list[str], number: int, reason_max: int = 300, extr
         "required": ["reason", "guesses"],
         "additionalProperties": False,
     }
+    if leftovers == "field":
+        schema["properties"]["leftover"] = {"enum": open_words + ["NONE"],
+                                            "description": "a remaining word that clearly fits an unfinished earlier clue, or NONE"}
+        schema["required"].append("leftover")
+    return schema
 
 
 class HybridPlayer(LLMPlayer):

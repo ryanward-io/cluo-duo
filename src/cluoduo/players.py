@@ -108,8 +108,11 @@ PLAYERS = {
     # Live tiers
     # Live tier since 28 Oct 2026: Gemma 4 31B alone, no GloVe vetting (best reference-partner result)
     # Live since 11 Nov 2026: the trusting guess prompt (own assassins only break ties; 600-character reasons)
+    # Live since 11 Nov 2026 (later): plus a required "leftover" answer on the partner's unfinished clues
     "smart": _llm("smart", "SmartPlayer", server="Gemma31", llm_guesses=True, glove_vetting=False,
-                  trust=True, short_tokens=400),
+                  trust=True, leftovers="field", short_tokens=400),
+    "smart-trust-field": _llm("smart-trust-field", "SmartPlayer", server="Gemma31", llm_guesses=True,
+                              glove_vetting=False, trust=True, leftovers="field", short_tokens=400),
     "smart-nov10": _llm("smart-nov10", "SmartPlayer", server="Gemma31", llm_guesses=True, glove_vetting=False),
     "smart-qwen36": _llm("smart-qwen36", "SmartPlayer", server="Qwen36"),  # live Smart until 28 Oct 2026
     "smart-full": _llm("smart-full", "SmartPlayer", server="Qwen36", full_numbers=True),
@@ -127,7 +130,7 @@ PLAYERS = {
     "smart-trust": _llm("smart-trust", "SmartPlayer", server="Gemma31", llm_guesses=True, glove_vetting=False,
                         trust=True, short_tokens=400),
     "smart-trust-leftover": _llm("smart-trust-leftover", "SmartPlayer", server="Gemma31", llm_guesses=True,
-                                 glove_vetting=False, trust=True, leftovers=True, short_tokens=400),
+                                 glove_vetting=False, trust=True, leftovers="extra", short_tokens=400),
     "smart-gemma-cap10": _llm("smart-gemma-cap10", "SmartPlayer", server="Gemma31", llm_guesses=True, glove_vetting=False,
                               rehearsal_timeout=10),  # rehearsals not back within 10 s count as misses
     # ...and on gpt-oss-120b (OpenAI) and Mistral Small 3.2 24B (Mistral AI)

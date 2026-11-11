@@ -79,7 +79,14 @@ REFERENCE |= {"ref + Smart, 10 turns": (range(200, 208), "smart-t10"),
               "ref + Sonnet (guide v9)": (range(200, 208), "duo-sonnet"),
               "ref + Smart Gemma, rehearsals capped at 10 s": (range(200, 208), "smart-gemma-cap10"),
               "ref + Advanced: compact JSON, 6 ideas": (range(200, 208), "smart-v2"),
-              "ref + Advanced (live since 31 Oct): compact JSON, 8 ideas": (range(200, 208), "smart-v3")}
+              "ref + Advanced (live since 31 Oct): compact JSON, 8 ideas": (range(200, 208), "smart-v3"),
+              # 11 Nov 2026 blind run (tags n1x..n2z; 12 Sonnet players, 4 mixed games each)
+              "ref + Advanced to 10 Nov (cautious guesses), 11 Nov round 1": (range(200, 208), "n1x"),
+              "ref + Advanced, trusting guesses, 11 Nov round 1": (range(200, 208), "n1z"),
+              "ref + Advanced, trusting guesses + leftovers, 11 Nov round 1": (range(200, 208), "n1y"),
+              "ref + Advanced to 10 Nov (cautious guesses), 11 Nov round 2": (range(200, 208), "n2y"),
+              "ref + Advanced, trusting guesses, 11 Nov round 2": (range(200, 208), "n2z"),
+              "ref + Advanced, trusting guesses + leftovers, 11 Nov round 2": (range(200, 208), "n2x")}
 
 
 def round_summary(name: str, seeds: range, tag: str = "") -> str:

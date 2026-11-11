@@ -107,7 +107,10 @@ PLAYERS = {
     "qwen36-sim-cautious": _llm("qwen36-sim-cautious", "CautiousSimulatingPlayer", server="Qwen36"),
     # Live tiers
     # Live tier since 28 Oct 2026: Gemma 4 31B alone, no GloVe vetting (best reference-partner result)
-    "smart": _llm("smart", "SmartPlayer", server="Gemma31", llm_guesses=True, glove_vetting=False),
+    # Live since 11 Nov 2026: the trusting guess prompt (own assassins only break ties; 600-character reasons)
+    "smart": _llm("smart", "SmartPlayer", server="Gemma31", llm_guesses=True, glove_vetting=False,
+                  trust=True, short_tokens=400),
+    "smart-nov10": _llm("smart-nov10", "SmartPlayer", server="Gemma31", llm_guesses=True, glove_vetting=False),
     "smart-qwen36": _llm("smart-qwen36", "SmartPlayer", server="Qwen36"),  # live Smart until 28 Oct 2026
     "smart-full": _llm("smart-full", "SmartPlayer", server="Qwen36", full_numbers=True),
     # Same Smart design on the dense Qwen3.6-27B (more model per decision)
@@ -120,6 +123,11 @@ PLAYERS = {
     # The 28 Oct version, before the speed fix: whitespace allowed in JSON, 600-token guess and rehearsal replies
     "smart-oct28": _llm("smart-oct28", "SmartPlayer", server="Gemma31Loose", llm_guesses=True, glove_vetting=False,
                         short_tokens=600),
+    # Trusting guess prompt (Nov 2026, scripts/guess_replay.py); 400-token guess replies fit the longer reason
+    "smart-trust": _llm("smart-trust", "SmartPlayer", server="Gemma31", llm_guesses=True, glove_vetting=False,
+                        trust=True, short_tokens=400),
+    "smart-trust-leftover": _llm("smart-trust-leftover", "SmartPlayer", server="Gemma31", llm_guesses=True,
+                                 glove_vetting=False, trust=True, leftovers=True, short_tokens=400),
     "smart-gemma-cap10": _llm("smart-gemma-cap10", "SmartPlayer", server="Gemma31", llm_guesses=True, glove_vetting=False,
                               rehearsal_timeout=10),  # rehearsals not back within 10 s count as misses
     # ...and on gpt-oss-120b (OpenAI) and Mistral Small 3.2 24B (Mistral AI)

@@ -76,19 +76,29 @@ def describe_history(view: dict) -> str:
     return "\n".join(lines) or "(no turns yet)"
 
 
-def describe_board(view: dict, show_key: bool, warn_assassins: bool = False) -> str:
+ASSASSIN_NOTE = "an ASSASSIN on YOUR key: 1 in 3 chance it is one on your partner's key too"
+# Trusting notes (Nov 2026): the old ones made the guesser skip clear targets that were assassins or
+# known bystanders on its own key, though its partner's clue was about THEIR key (see guess_messages).
+TRUST_ASSASSIN_NOTE = ("an ASSASSIN on YOUR key, which only matters if the clue is unclear: your partner checks "
+                       "every clue against THEIR assassins, so a word their clue clearly points at is most likely "
+                       "their agent")
+TRUST_BYSTANDER_NOTE = "a bystander on YOUR key, which says nothing about your partner's key: still a fair guess"
+
+
+def describe_board(view: dict, show_key: bool, warn_assassins: bool = False, trust: bool = False) -> str:
     """The 25 words with what's known about each. `show_key` adds my whole key (for clue giving);
-    `warn_assassins` marks only my assassins (for guessing; see guess_messages)."""
+    `warn_assassins` marks only my assassins (for guessing; see guess_messages); `trust` uses the
+    trusting wording for my assassins and bystanders."""
     me, partner = view["side"], game.other(view["side"])
     rows = []
     for i, word in enumerate(view["words"]):
         notes = []
         if warn_assassins and not show_key and view["my_key"][i] == game.ASSASSIN and not view["found"][i]:
-            notes.append("an ASSASSIN on YOUR key: 1 in 3 chance it is one on your partner's key too")
+            notes.append(TRUST_ASSASSIN_NOTE if trust else ASSASSIN_NOTE)
         if view["found"][i]:
             notes.append("already found (out of play)")
         if i in view["bystanders"][me]:
-            notes.append("known bystander on YOUR key")
+            notes.append(TRUST_BYSTANDER_NOTE if trust and not show_key else "known bystander on YOUR key")
         if i in view["bystanders"][partner]:
             notes.append("known bystander on your PARTNER's key")
         key = f" [your key: {COLOUR[view['my_key'][i]]}]" if show_key else ""
@@ -100,10 +110,13 @@ class LLMPlayer:
     name = "qwen"
 
     def __init__(self, seed: int | None = None, *, backend: Backend | None = None, server: str = "LLM",
-                 thinking: bool = False, fallback: Any = None, short_tokens: int = 250, **_ignored):
+                 thinking: bool = False, fallback: Any = None, short_tokens: int = 250, trust: bool = False,
+                 leftovers: bool = False, **_ignored):
         self.backend = backend or modal_backend(server)
         self.short_tokens = short_tokens  # cap on guess and rehearsal replies (600 before 31 Oct)
         self.thinking = thinking
+        self.trust = trust  # trusting guess prompt: own assassins only break ties (see guess_messages)
+        self.leftovers = leftovers  # one extra guess on the partner's unfinished earlier clues
         self.seed = seed or 0
         self._fallback = fallback
         self._plan: tuple[tuple, list[int]] | None = None  # (turn key, remaining guesses) for the current clue
@@ -221,24 +234,64 @@ class LLMPlayer:
     def _plan_guesses(self, view: dict) -> list[int]:
         clue = view["clue"]
         open_words = [w for i, w in enumerate(view["words"]) if game.can_guess(view, i)]
-        data = self._ask(guess_messages(view, clue["word"], clue["number"], open_words),
-                         guess_schema(open_words, clue["number"]), "guess")
+        data = self._ask(guess_messages(view, clue["word"], clue["number"], open_words,
+                                        trust=self.trust, leftovers=self.leftovers),
+                         guess_schema(open_words, clue["number"], reason_max=600 if self.trust else 300,
+                                      extra=int(self.leftovers)), "guess")
         index = {w: i for i, w in enumerate(view["words"])}
         plan = []
         for w in data.get("guesses", []):
             i = index.get(str(w).strip().upper())
             if i is None or i in plan:
                 continue
-            if view["my_key"][i] == game.ASSASSIN and plan:
+            if view["my_key"][i] == game.ASSASSIN and plan and not self.trust:
                 break  # my own assassin only ever as the first, clearest pick (lesson from the player guide)
             plan.append(i)
-        plan = plan[:max(clue["number"], 1)]
+        plan = plan[:max(clue["number"], 1) + int(self.leftovers)]
         self.note(view, {"type": "guess", "reason": str(data.get("reason", "")),
                          "planned": [view["words"][i] for i in plan]})
         return plan
 
 
-def guess_messages(view: dict, clue_word: str, number: int, open_words: list[str], own_key: bool = True) -> list[dict]:
+TRUST_TAIL = (". Trust your partner: they can see their own key and avoided clues that point at their assassins. "
+              "So if a word is clearly the best fit for the clue, guess it, even if it is an ASSASSIN on your own key. "
+              "Your own key only breaks ties: when two words fit about equally well, prefer the one that is not an "
+              "ASSASSIN on your key.")
+LEFTOVER_TAIL = (" UNFINISHED CLUES: when a turn ends on a bystander or a stop before all of a clue's targets "
+                 "were found, those targets are probably still on the board. After your guesses for this clue, you "
+                 "may add ONE extra guess: a word that clearly fits one of your partner's unfinished clues listed "
+                 "above (the way a human player looks back at earlier clues). Only add it if the fit is clear; a loose "
+                 "extra guess risks an ASSASSIN.")
+
+
+def unfinished_clues(view: dict) -> str:
+    """The partner's earlier clues that found fewer agents than their number (the current clue excluded)."""
+    me, clues, turn, cur = view["side"], [], 0, None
+    for h in view["history"]:
+        if h["type"] == "clue":
+            turn += 1
+            cur = None if h["side"] == me else {"turn": turn, "word": h["word"], "number": h["number"],
+                                                 "found": [], "missed": None}
+            if cur is not None:
+                clues.append(cur)
+        elif h["type"] == "guess" and cur is not None:
+            if h["outcome"] == game.GREEN:
+                cur["found"].append(h["word"])
+            else:
+                cur["missed"] = h["word"]
+    out = []
+    for c in clues[:-1]:
+        if len(c["found"]) >= c["number"]:
+            continue
+        got = f"you found {', '.join(c['found'])}" if c["found"] else "you found nothing"
+        end = f", then hit the bystander {c['missed']}" if c["missed"] else ", then stopped"
+        out.append(f"- Turn {c['turn']}: {c['word']} {c['number']}: {got}{end}. "
+                   f"Up to {c['number'] - len(c['found'])} target(s) may still be hidden (or found since by other clues).")
+    return "\n".join(out) or "(none)"
+
+
+def guess_messages(view: dict, clue_word: str, number: int, open_words: list[str], own_key: bool = True,
+                   trust: bool = False, leftovers: bool = False) -> list[dict]:
     """The guesser's prompt.
 
     Only my ASSASSINS are marked, not my whole key. With the whole key the model guessed its own
@@ -246,28 +299,38 @@ def guess_messages(view: dict, clue_word: str, number: int, open_words: list[str
     assassins on its own key (more than half of the assassin hits in one evaluation), and each of
     those is an assassin on the partner's key too with probability 1/3 (game.KEY_LAYOUT).
     `own_key=False` drops the marks, for the clue giver rehearsing how its partner will guess.
+
+    `trust` (Nov 2026): the old wording made the model skip clear targets that were assassins on
+    its own key. In a replay of 419 past guess turns (scripts/guess_replay.py), when the trusting
+    model did guess one, it was the partner's agent 91% of the time; agents found per clue rose
+    from 1.38 to 1.60 with no clear rise in assassin hits. `leftovers` adds the partner's unfinished
+    earlier clues and allows one extra guess on them.
     """
+    tail = (TRUST_TAIL if trust else ", and avoid words that are ASSASSINS on your own key unless the clue clearly means them.") \
+        if own_key else "."
+    unfinished = f"Your partner's unfinished earlier clues:\n{unfinished_clues(view)}\n\n" if leftovers else ""
     return [
         {"role": "system", "content": RULES},
         {"role": "user", "content": (
-            f"Board:\n{describe_board(view, show_key=False, warn_assassins=own_key)}\n\n"
-            f"Game so far:\n{describe_history(view)}\n\n"
+            f"Board:\n{describe_board(view, show_key=False, warn_assassins=own_key, trust=trust)}\n\n"
+            f"Game so far:\n{describe_history(view)}\n\n" + unfinished +
             f"Your partner's clue is {clue_word} {number}: they are pointing at {number} word(s) "
             "that are AGENTS on THEIR key. Words you can guess: " + ", ".join(open_words) + ".\n"
             f"Pick at most {max(number, 1)} word(s) most strongly linked to the clue, most confident first. "
-            "A wrong guess can hit an ASSASSIN, so leave out words you are unsure of"
-            + (", and avoid words that are ASSASSINS on your own key unless the clue clearly means them." if own_key else ".")
+            "A wrong guess can hit an ASSASSIN, so leave out words you are unsure of" + tail
+            + (LEFTOVER_TAIL if leftovers else "")
         )},
     ]
 
 
-def guess_schema(open_words: list[str], number: int) -> dict:
+def guess_schema(open_words: list[str], number: int, reason_max: int = 300, extra: int = 0) -> dict:
+    """`reason_max` 300 cut Gemma's reasoning off mid-sentence; `extra` allows leftover guesses."""
     return {
         "type": "object",
         "properties": {
-            "reason": {"type": "string", "maxLength": 300, "description": "one short sentence on what the clue most likely means"},
+            "reason": {"type": "string", "maxLength": reason_max, "description": "one short sentence on what the clue most likely means"},
             "guesses": {"type": "array", "items": {"enum": open_words}, "minItems": 1,
-                        "maxItems": min(len(open_words), max(number, 1)),
+                        "maxItems": min(len(open_words), max(number, 1) + extra),
                         "description": "board words to guess, most confident first; only as many as are worth the risk"},
         },
         "required": ["reason", "guesses"],

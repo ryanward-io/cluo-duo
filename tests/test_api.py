@@ -203,3 +203,19 @@ def test_near_the_limit_rereads_more_often(gpu_random):
     c = TestClient(api.create_app(store, usage=usage))
     c.post("/api/games", json={"partner": "random", "first": "human"})
     assert reads == [1]  # $25 is within $3 of $27, so a 10-minute-old figure is re-read
+
+
+def test_usage_fields_recorded():
+    store = MemoryStore()
+    c = client(store=store)
+    player = "0f8e2c1a-4b7d-4e3a-9c2b-1a2b3c4d5e6f"
+    gid = c.post("/api/games", json={"partner": "random", "first": "human", "player": player, "me": True}).json()["id"]
+    state = store.get(gid)
+    assert state["player"] == player and state["me"] is True
+    assert state["created"] <= state["updated"]
+    assert "player" not in c.get(f"/api/games/{gid}").json()  # not echoed back
+
+
+def test_player_id_must_look_random():
+    r = client().post("/api/games", json={"partner": "random", "player": "ryan@example.com"})
+    assert r.status_code == 422

@@ -32,6 +32,11 @@ image = (
 # Entries expire after 7 days without reads or writes, which suits abandoned games.
 games = modal.Dict.from_name("cluo-duo-games", create_if_missing=True)
 
+# Usage stats outlive the Dict: once a day every game is copied to a file on this volume.
+# Read them with scripts/usage.py.
+stats = modal.Volume.from_name("cluo-duo-stats", create_if_missing=True)
+SNAPSHOT_DAYS = 7  # games untouched for this long are on the volume already, so drop them from the Dict
+
 
 @app.function(
     image=image,
@@ -62,3 +67,25 @@ def usage_this_month() -> float:
     s = modal.Workspace.from_context().billing.summary()
     free = sum(s.adjustments.get(k, 0) for k in ("Free Storage", "Network Egress Allowance"))  # negative
     return float(s.metered_cost + free)
+
+
+@app.function(image=image, volumes={"/stats": stats}, schedule=modal.Cron("0 18 * * *"), timeout=10 * 60)
+def snapshot():
+    """Daily (5am Melbourne): copy every game to /stats/games/<id>.json, then drop long-idle games from the Dict."""
+    import json
+    import os
+    import time
+
+    os.makedirs("/stats/games", exist_ok=True)
+    copied = dropped = 0
+    for key, state in games.items():
+        if key.startswith("__") or not isinstance(state, dict):
+            continue
+        with open(f"/stats/games/{key}.json", "w") as f:
+            json.dump(state, f)
+        copied += 1
+        if time.time() - state.get("updated", time.time()) > SNAPSHOT_DAYS * 24 * 3600:
+            games.pop(key, None)
+            dropped += 1
+    stats.commit()
+    print(f"Copied {copied} games, dropped {dropped} idle ones from the Dict.")

@@ -9,6 +9,25 @@ const TIPS_KEY = "cluo-duo:tips";
 const SETUP_KEY = "cluo-duo:setup";
 const TITLE = document.title;
 
+// Usage stats: a random id for this browser, so plays can be counted without knowing who anyone is.
+// ?me=1 marks a browser as Ryan's own, so his games are left out of the counts (?me=0 undoes it).
+const PLAYER_KEY = "cluo-duo:player";
+const ME_KEY = "cluo-duo:me";
+function storedFlag(key, make) {
+  try {
+    let v = localStorage.getItem(key);
+    if (!v && make) { v = make(); localStorage.setItem(key, v); }
+    return v;
+  } catch (_) { return make ? make() : null; }
+}
+const newId = () => (crypto.randomUUID ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join(""));
+const PLAYER = storedFlag(PLAYER_KEY, newId);
+try {
+  if (params.get("me") === "1") localStorage.setItem(ME_KEY, "1");
+  if (params.get("me") === "0") localStorage.removeItem(ME_KEY);
+} catch (_) { /* storage blocked */ }
+const ME = storedFlag(ME_KEY) === "1";
+
 const $ = (s) => document.querySelector(s);
 const SKULL = '<svg class="skull" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M8 1C4.1 1 1.5 3.6 1.5 7c0 2 .9 3.4 2.3 4.2V13a1 1 0 0 0 1 1h.9v-1.5h1V14h2.6v-1.5h1V14h.9a1 1 0 0 0 1-1v-1.8c1.4-.8 2.3-2.2 2.3-4.2C14.5 3.6 11.9 1 8 1zM5.3 9.6a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2zm5.4 0a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2zM8 11.2l-.9-1.6h1.8z"/></svg>';
 function skull(cls) {
@@ -654,7 +673,7 @@ $("#start").addEventListener("click", () => {
   // Show the board first, then ask for the partner's opening clue, so the player can study the
   // board while a GPU partner wakes up.
   act("/api/games", { first, partner, sudden_death: $("#sudden-death").checked, turns: Number($("#turn-count").value),
-    partner_moves: false }, "Setting up the board…").then(() => {
+    partner_moves: false, player: PLAYER, me: ME }, "Setting up the board…").then(() => {
     if (state?.phase === "clue" && state.giver === "b") {
       act(`/api/games/${state.id}/partner`, {}, "Your partner is thinking of a clue. Take a look at the board while you wait.");
     }

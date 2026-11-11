@@ -31,6 +31,9 @@ class NewGame(BaseModel):
     # False: return the board at once and let the client ask for the partner's first move (POST .../partner),
     # so the player can study the board while a GPU partner wakes up.
     partner_moves: bool = True
+    # Usage stats: a random id the browser keeps (no personal data), and whether this browser is Ryan's own.
+    player: str | None = Field(default=None, pattern=r"^[0-9a-f-]{8,36}$")
+    me: bool = False
 
 
 # GPU-backed partners: each new game may wake a GPU, so cap them per day (UTC) to protect the credit.
@@ -111,6 +114,7 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None, usage=None
                                           "thoughts": state.get("thoughts", []) if over else None}
 
     def respond(state: game.State) -> dict:
+        state["updated"] = time.time()
         store.put(state)
         return public(state)
 
@@ -231,6 +235,7 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None, usage=None
         state = game.new_game(seed=body.seed if allow_local else None, first_clue=HUMAN if body.first == "human" else AI,
                               sudden_death=body.sudden_death, turns=body.turns)
         state["partner"] = body.partner
+        state |= {"created": time.time(), "player": body.player, "me": body.me}
         if body.partner_moves:
             state = partner_plays(state)
         return respond(state)

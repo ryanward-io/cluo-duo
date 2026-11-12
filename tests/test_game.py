@@ -456,3 +456,19 @@ def test_api_partner_thoughts_shown_only_after_the_game(monkeypatch):
 def test_unseeded_games_use_a_seed_too_big_to_search():
     seeds = {game.new_game()["seed"] for _ in range(5)}
     assert len(seeds) == 5 and max(seeds) > 2**64
+
+
+@pytest.mark.parametrize("clue,board_word", [
+    ("DONUT", "DOUGHNUT"), ("DONUTS", "DOUGHNUT"), ("TIRE", "TYRE"), ("GRAY", "GREY"), ("CENTER", "CENTRE"),
+    ("THEATER", "THEATRE"), ("CATALOG", "CATALOGUE"), ("ORGANIZE", "ORGANISE"), ("PLOW", "PLOUGH"),
+])
+def test_irregular_spellings_rejected(clue, board_word):
+    state = game.new_game(seed=1)
+    state["words"][0] = board_word
+    with pytest.raises(game.RuleError, match="another spelling|overlaps"):
+        game.check_clue(state, clue, 1)
+
+
+@pytest.mark.parametrize("a,b", [("HOUSE", "HORSE"), ("GENRE", "GENDER"), ("PRECISE", "PRECINCT"), ("DOUGH", "DONUT")])
+def test_unrelated_words_not_variants(a, b):
+    assert not game.spelling_variant(a, b)

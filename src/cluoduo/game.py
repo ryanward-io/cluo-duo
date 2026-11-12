@@ -131,11 +131,39 @@ def normalise_clue(word: str) -> str:
     return word.strip().upper()
 
 
+# Spellings too far apart for the one-letter test, mapped to one shared form (with their plurals).
+IRREGULAR = {
+    "DOUGHNUT": "DONUT", "TYRE": "TIRE", "GREY": "GRAY", "PLOUGH": "PLOW", "CHEQUE": "CHECK",
+    "PYJAMAS": "PAJAMAS", "PYJAMA": "PAJAMA", "MUM": "MOM", "KERB": "CURB", "AXE": "AX",
+    "DRAUGHT": "DRAFT", "GAOL": "JAIL", "AEROPLANE": "AIRPLANE", "LIQUORICE": "LICORICE",
+    "SULPHUR": "SULFUR", "SCEPTIC": "SKEPTIC", "MANOEUVRE": "MANEUVER", "JEWELLERY": "JEWELRY",
+    "PROGRAMME": "PROGRAM", "COSY": "COZY", "DONUTS": "DONUT",
+}
+IRREGULAR |= {k + "S": v + "S" for k, v in IRREGULAR.items() if not k.endswith("S")}
+
+
+def spelling_key(word: str) -> str:
+    """One form for the usual British/American spellings: CENTRE/CENTER, ORGANISE/ORGANIZE, CATALOGUE/CATALOG,
+    DOUGHNUT/DONUT. Words that aren't variants of anything just come back changed in harmless ways."""
+    w = IRREGULAR.get(word, word)
+    if len(w) >= 5 and w.endswith("RE") and w[-3] not in "AEIOU":
+        w = w[:-2] + "ER"  # CENTRE, THEATRE, METRE, FIBRE
+    for uk, us in (("OGUE", "OG"), ("ISE", "IZE"), ("ISED", "IZED"), ("ISES", "IZES"), ("ISING", "IZING"),
+                   ("ISATION", "IZATION"), ("YSE", "YZE")):
+        if len(w) >= 6 and w.endswith(uk):
+            w = w[: -len(uk)] + us
+            break
+    return w
+
+
 def spelling_variant(a: str, b: str) -> bool:
-    """One inserted or deleted letter apart, for words of 5+ letters: HARBOR/HARBOUR, COLOR/COLOUR.
+    """Another spelling of the same word: one inserted or deleted letter apart for words of 5+ letters
+    (HARBOR/HARBOUR, COLOR/COLOUR), or the same after spelling_key (CENTRE/CENTER, DONUT/DOUGHNUT).
 
     Swapped letters are allowed (HOUSE/HORSE are different words).
     """
+    if a != b and spelling_key(a) == spelling_key(b):
+        return True
     if min(len(a), len(b)) < 5 or abs(len(a) - len(b)) != 1:
         return False
     short, long = sorted((a, b), key=len)

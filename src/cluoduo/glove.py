@@ -68,11 +68,13 @@ class BoardCache:
             words = set(board)
             shortened = {b[:i] + b[i + 1:] for b in board if len(b) >= 6 for i in range(len(b))}
             joined = "|".join(board)  # one string, so "is this root inside any board word" is a single search
+            keys = {game.spelling_key(b) for b in board}
             self.legal = np.array([
                 not (any(c in b or b in c for b in board)
                      or any(r in joined for r in game.roots(c))
                      or (len(c) >= 5 and c in shortened)
-                     or (len(c) >= 6 and any(c[:i] + c[i + 1:] in words for i in range(len(c)))))
+                     or (len(c) >= 6 and any(c[:i] + c[i + 1:] in words for i in range(len(c))))
+                     or game.spelling_key(c) in keys)
                 for c in (v.words[i] for i in v.clue_ids)
             ])
             self._board = board

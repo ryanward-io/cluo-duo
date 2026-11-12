@@ -43,6 +43,12 @@ PROGRESS = "__progress__"  # store key prefix for a GPU partner's current step
 GPU_SEEN = "__gpu_seen__"  # when the GPU partner last answered anyone
 GPU_AWAKE_SECONDS = 4 * 60  # the GPU sleeps 5 minutes after its last call; allow a minute's margin
 GPU_GAMES_PER_DAY = 40
+# The GPU stays up 5 minutes after its last call, so a player thinking over their move doesn't wait for it
+# to start again. Once no Advanced game is still going, that drops to a minute (in case they start another).
+GPU_IDLE_PLAYING = 5 * 60
+GPU_IDLE_DONE = 60
+GPU_IDLE = "__gpu_idle__"  # the wait currently set on the GPU server
+GPU_ACTIVE = "__gpu_active__"  # Advanced games still going: id -> time of their last move
 # Each warm-up that wakes the GPU costs its boot plus 5 idle minutes, so cap them too, and skip any
 # warm-up while the GPU is already awake or was asked to wake recently.
 GPU_WARMS_PER_DAY = 40
@@ -88,9 +94,10 @@ def owes_move(state: game.State) -> bool:
             or (phase == "sudden_death" and state["guesser"] == AI))
 
 
-def create_app(store: Store, allow_local: bool = False, warm_up=None, usage=None) -> FastAPI:
+def create_app(store: Store, allow_local: bool = False, warm_up=None, usage=None, set_idle=None) -> FastAPI:
     """usage: a function returning this month's workspace usage in dollars (counted as Modal's usage
-    limit counts it), or None to skip the monthly budget check (tests and local dev)."""
+    limit counts it), or None to skip the monthly budget check (tests and local dev).
+    set_idle(server, seconds): how long the GPU server waits after its last call before shutting down."""
     app = FastAPI(title="Cluo Duo", docs_url=None, redoc_url=None, openapi_url=None)
     app.add_middleware(CORSMiddleware, allow_origins=ALLOWED_ORIGINS, allow_origin_regex=LOCAL_ORIGINS if allow_local else None,
                        allow_methods=["GET", "POST"],
@@ -116,7 +123,39 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None, usage=None
     def respond(state: game.State) -> dict:
         state["updated"] = time.time()
         store.put(state)
+        if state.get("partner") in GPU_PARTNERS:
+            track_gpu_game(state)
         return public(state)
+
+    def gpu_idle(seconds: int) -> None:
+        """Set the GPU server's wait before shutting down, if it isn't set to that already."""
+        if (store.get(GPU_IDLE) or {}).get("seconds", GPU_IDLE_PLAYING) == seconds:
+            return
+        store.put({"id": GPU_IDLE, "seconds": seconds, "t": time.time()})
+        if set_idle is not None:
+            try:
+                for server in set(GPU_PARTNERS.values()):
+                    set_idle(server, seconds)
+            except Exception as e:  # never let this break a game; the 5-minute default still applies
+                print(f"Setting the GPU idle time failed: {e!r}")
+
+    def track_gpu_game(state: game.State) -> None:
+        """Keep the list of Advanced games still going; once it's empty, let the GPU shut down sooner."""
+        now = time.time()
+        active = (store.get(GPU_ACTIVE) or {}).get("games", {})
+        # A game untouched for longer than the GPU would stay up anyway has been left.
+        active = {k: t for k, t in active.items() if now - t < GPU_IDLE_PLAYING}
+        if state["phase"] == "over":
+            active.pop(state["id"], None)
+        else:
+            active[state["id"]] = now
+        store.put({"id": GPU_ACTIVE, "games": active})
+        gpu_idle(GPU_IDLE_PLAYING if active else GPU_IDLE_DONE)
+
+    def awake_seconds() -> int:
+        """How long after its last call the GPU can be counted on to still be up (a margin under its idle time)."""
+        idle = (store.get(GPU_IDLE) or {}).get("seconds", GPU_IDLE_PLAYING)
+        return GPU_AWAKE_SECONDS if idle == GPU_IDLE_PLAYING else idle - 20
 
     def partner_plays(state: game.State) -> game.State:
         player = partner_for(state)
@@ -131,6 +170,7 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None, usage=None
             gpu_games_today(state["partner"], add=True)
             state["gpu_counted"] = True
         if gpu:
+            gpu_idle(GPU_IDLE_PLAYING)
             # A GPU partner can take a while: it reports each step here, for GET .../progress.
             key = PROGRESS + state["id"]
             def progress(text: str, answered: bool) -> None:
@@ -215,12 +255,14 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None, usage=None
             return {"ok": False, "reason": "monthly"}
         now = time.time()
         recent = max((store.get(GPU_SEEN) or {}).get("t", 0), (store.get(LAST_WARM) or {}).get("t", 0))
-        if now - recent < GPU_AWAKE_SECONDS:
+        if now - recent < awake_seconds():
+            gpu_idle(GPU_IDLE_PLAYING)  # keep it up for the new game
             return {"ok": True}  # awake, or already waking: nothing to do
         if gpu_games_today(body.partner, kind="warms") >= GPU_WARMS_PER_DAY:
             return {"ok": True}  # out of warm-ups for today; the game's first move still wakes it
         gpu_games_today(body.partner, add=True, kind="warms")
         store.put({"id": LAST_WARM, "t": now})
+        gpu_idle(GPU_IDLE_PLAYING)
         if warm_up is not None:
             warm_up(GPU_PARTNERS[body.partner])
         return {"ok": True}
@@ -246,7 +288,7 @@ def create_app(store: Store, allow_local: bool = False, warm_up=None, usage=None
         record = store.get(PROGRESS + game_id) or {}
         seen = (store.get(GPU_SEEN) or {}).get("t", 0)
         return {"text": record.get("text"), "answered": record.get("answered", False),
-                "awake": time.time() - seen < GPU_AWAKE_SECONDS}
+                "awake": time.time() - seen < awake_seconds()}
 
     @app.post("/api/games/{game_id}/partner")
     def partner(game_id: str) -> dict:

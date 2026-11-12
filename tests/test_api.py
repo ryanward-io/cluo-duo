@@ -219,3 +219,25 @@ def test_usage_fields_recorded():
 def test_player_id_must_look_random():
     r = client().post("/api/games", json={"partner": "random", "player": "ryan@example.com"})
     assert r.status_code == 422
+
+
+def test_gpu_idles_briefly_once_no_game_is_left(gpu_random):
+    calls = []
+    store = MemoryStore()
+    c = TestClient(api.create_app(store, set_idle=lambda server, s: calls.append(s)))
+    a = c.post("/api/games", json={"partner": "random", "first": "human"}).json()
+    b = c.post("/api/games", json={"partner": "random", "first": "human"}).json()
+    assert calls == []  # games going: the 5-minute default stands
+
+    def finish(g):
+        state = store.get(g["id"])
+        store.put(state | {"phase": "over", "result": "assassin"})
+        c.post(f"/api/games/{g['id']}/partner")
+
+    finish(a)
+    assert calls == []  # b is still going
+    finish(b)
+    assert calls == [api.GPU_IDLE_DONE]
+    assert c.get(f"/api/games/{b['id']}/progress").status_code == 200
+    c.post("/api/games", json={"partner": "random", "first": "human"})
+    assert calls == [api.GPU_IDLE_DONE, api.GPU_IDLE_PLAYING]  # a new game keeps it up again

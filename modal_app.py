@@ -58,7 +58,13 @@ def web():
 
     from cluoduo.llm import warm_up
 
-    return create_app(ModalDictStore(games), warm_up=warm_up, usage=usage_this_month)
+    return create_app(ModalDictStore(games), warm_up=warm_up, usage=usage_this_month, set_idle=set_gpu_idle)
+
+
+def set_gpu_idle(server: str, seconds: int) -> None:
+    """How long the GPU server waits after its last call before shutting down. Redeploying llm_server.py
+    resets it to the 5 minutes set there."""
+    modal.Cls.from_name("cluo-duo-llm", server)().update_autoscaler(scaledown_window=seconds)
 
 
 def usage_this_month() -> float:

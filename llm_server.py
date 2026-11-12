@@ -69,9 +69,14 @@ class Server:
     REASONING_PARSER: str | None = "qwen3"  # keeps any <think> text out of the JSON answer (Qwen models)
     THINKING_SWITCH = True  # the chat template takes Qwen's enable_thinking flag
     MIN_TOKENS = 0  # models that always reason need room for it before the answer
+    SNAPSHOT = False  # SnapServer starts vLLM itself (Modal runs a base class's enter hook as well)
 
     @modal.enter()
     def start(self) -> None:
+        if not self.SNAPSHOT:
+            self._launch()
+
+    def _launch(self) -> None:
         cmd = [
             "vllm", "serve", self.MODEL,
             "--revision", self.REVISION,
@@ -130,6 +135,54 @@ class Server:
     def stop(self) -> None:
         self.process.terminate()
 
+
+GEMMA31_MODEL = "RedHatAI/gemma-4-31B-it-FP8-dynamic"
+GEMMA31_REVISION = "d4ab4f579dd3516f97d8a6a4c98d0653480bad15"
+GEMMA31_ARGS = [
+    "--language-model-only",
+    "--max-model-len", "16384",
+    "--gpu-memory-utilization", "0.92",
+    "--max-num-seqs", "32",
+    "--max-cudagraph-capture-size", "32",
+    # Compact JSON only. With whitespace allowed, a reply whose "reason" hit its length limit
+    # sometimes padded with blank lines up to max_tokens (about 30 s) instead of moving on.
+    "--structured-outputs-config", '{"backend": "xgrammar", "disable_any_whitespace": true}',
+]
+GEMMA31_SAMPLING = {"top_p": 0.95, "top_k": 64}  # model card
+
+
+class SnapServer(Server):
+    """A Server that starts from a GPU memory snapshot (Modal, alpha). The first few cold starts after a
+    deploy load the model as usual, warm it up, put vLLM to sleep and save the container's memory;
+    later cold starts restore that and just wake vLLM, skipping the imports, weight loading and
+    compiling. Needs --enable-sleep-mode and VLLM_SERVER_DEV_MODE=1 (snap_image)."""
+
+    SNAPSHOT = True
+
+    @modal.enter(snap=True)
+    def load_and_snapshot(self) -> None:
+        import httpx
+
+        self._launch()
+        # Run a few requests first, so any compiling they trigger lands in the snapshot too.
+        schema = {"type": "object", "properties": {"clue": {"type": "string"}}, "required": ["clue"]}
+        for _ in range(3):
+            httpx.post(f"http://127.0.0.1:{PORT}/v1/chat/completions", timeout=120, json={
+                "model": "llm", "max_tokens": 16, "messages": [{"role": "user", "content": "One-word clue for PENGUIN."}],
+                "response_format": {"type": "json_schema", "json_schema": {"name": "reply", "schema": schema}},
+            }).raise_for_status()
+        # Asleep, the weights sit in CPU memory and the KV cache is freed: the state the snapshot needs.
+        httpx.post(f"http://127.0.0.1:{PORT}/sleep?level=1", timeout=300).raise_for_status()
+
+    @modal.enter(snap=False)
+    def wake(self) -> None:
+        import httpx
+
+        httpx.post(f"http://127.0.0.1:{PORT}/wake_up", timeout=300).raise_for_status()
+        self._wait_until_ready()
+
+
+snap_image = gemma_image.env({"VLLM_SERVER_DEV_MODE": "1", "TORCHINDUCTOR_COMPILE_THREADS": "1"})
 
 VOLUMES = {"/root/.cache/huggingface": hf_cache, "/root/.cache/vllm": vllm_cache,
            "/root/.cache/flashinfer": flashinfer_cache}
@@ -228,20 +281,34 @@ class Gemma31(Server):
     """Gemma 4 31B (Google): a dense model about the size of Qwen3.6-27B, from a different family,
     to check whether Smart's ceiling is about Qwen or about model size."""
 
-    MODEL = "RedHatAI/gemma-4-31B-it-FP8-dynamic"
-    REVISION = "d4ab4f579dd3516f97d8a6a4c98d0653480bad15"
+    MODEL = GEMMA31_MODEL
+    REVISION = GEMMA31_REVISION
     REASONING_PARSER = None
-    VLLM_ARGS = [
-        "--language-model-only",
-        "--max-model-len", "16384",
-        "--gpu-memory-utilization", "0.92",
-        "--max-num-seqs", "32",
-        "--max-cudagraph-capture-size", "32",
-        # Compact JSON only. With whitespace allowed, a reply whose "reason" hit its length limit
-        # sometimes padded with blank lines up to max_tokens (about 30 s) instead of moving on.
-        "--structured-outputs-config", '{"backend": "xgrammar", "disable_any_whitespace": true}',
-    ]
-    SAMPLING = {"top_p": 0.95, "top_k": 64}  # model card
+    VLLM_ARGS = GEMMA31_ARGS
+    SAMPLING = GEMMA31_SAMPLING
+
+
+@app.cls(
+    image=snap_image,
+    gpu="L40S",
+    volumes=VOLUMES,
+    min_containers=0,
+    max_containers=1,
+    scaledown_window=5 * MINUTES,
+    timeout=5 * MINUTES,
+    startup_timeout=30 * MINUTES,
+    enable_memory_snapshot=True,
+    experimental_options={"enable_gpu_snapshot": True},
+)
+@modal.concurrent(max_inputs=64)
+class Gemma31Snap(SnapServer):
+    """Gemma31 exactly, but starting from a GPU memory snapshot (faster cold starts)."""
+
+    MODEL = GEMMA31_MODEL
+    REVISION = GEMMA31_REVISION
+    REASONING_PARSER = None
+    VLLM_ARGS = [*GEMMA31_ARGS, "--enable-sleep-mode"]
+    SAMPLING = GEMMA31_SAMPLING
 
 
 @app.cls(
@@ -339,7 +406,7 @@ def main(model: str = "LLM") -> None:
         "required": ["clue", "targets"],
     }
     start = time.time()
-    out = {"LLM": LLM, "Qwen36": Qwen36, "Qwen27": Qwen27, "Gemma31": Gemma31, "GptOss": GptOss, "Mistral24": Mistral24}[model]().chat.remote(
+    out = {"LLM": LLM, "Qwen36": Qwen36, "Qwen27": Qwen27, "Gemma31": Gemma31, "Gemma31Snap": Gemma31Snap, "GptOss": GptOss, "Mistral24": Mistral24}[model]().chat.remote(
         [{"role": "user", "content": "Give a one-word clue linking PENGUIN, OSTRICH and KITE (the bird). Reply as JSON."}],
         schema=schema,
     )
